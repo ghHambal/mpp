@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 const connectionString = 'postgresql://postgres.mnywfxnrftmxkxkmnelv:spbHambal1308%2F@aws-1-ap-southeast-1.pooler.supabase.com:5432/postgres';
-const xlsxPath = '/Users/admin/Azizsatn-Projects/DEPAZ/old_database.xlsx';
+const xlsxPath = '/Users/admin/Azizsatn-Projects/DEPAZ/สภานักเรียน68.xlsx';
 
 async function main() {
     console.log('Connecting to Supabase PostgreSQL...');
