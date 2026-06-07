@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <title>ระบบจัดการสภานักเรียน</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color:   #D81B60;
+      --secondary-color: #00796B;
+      --bg-soft:         #FFF3F8;
+      --surface-color:   #FFFFFF;
+      --text-color:      #1F2937;
+    }
+    body { font-family: 'Sarabun', system-ui, -apple-system, BlinkMacSystemFont,"Segoe UI",sans-serif; background: var(--bg-soft); }
+    .card-soft { background: var(--surface-color); border-radius: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 0; }
+    .page-header-title { color: var(--primary-color); font-weight: 700; }
+    .page-header-subtitle { color: var(--text-color); opacity: 0.85; }
+    .gender-card { cursor: pointer; transition: transform .1s ease, box-shadow .1s ease, border-color .1s ease; border: 1px solid transparent; }
+    .gender-card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,0.08); }
+    .gender-card.active { border-color: var(--primary-color); box-shadow: 0 12px 30px rgba(216,27,96,0.3); }
+    .avatar-circle { width: 32px; height: 32px; border-radius: 50%; background:#ffcdd2; color:#b71c1c; display:flex; align-items:center; justify-content:center; font-weight:600; }
+    .filter-chip { font-size: 0.8rem; }
+    .alert { position: relative; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid transparent; font-size: 0.875rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .alert-success { background: #ecfdf3; border-color: #bbf7d0; color: #166534; }
+    .alert-danger { background: #fef2f2; border-color: #fecaca; color: #991b1b; }
+    .alert-warning { background: #fffbeb; border-color: #fef3c7; color: #92400e; }
+    .alert-info { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .btn-close { border: none; background: transparent; font-size: 1rem; line-height: 1; color: #6b7280; cursor: pointer; }
+    .print-only { display: none; }
+    @media print {
+      .no-print { display: none !important; }
+      body { background:#ffffff !important; }
+      .card-soft { box-shadow:none; border-radius:0; }
+      .print-only { display: table-cell; }
+      table th, table td { padding-top: 2px !important; padding-bottom: 2px !important; font-size: 10px !important; white-space: nowrap !important; border-collapse: collapse; border: 1px solid #999999; }
+    }
+    .btn-status { display: inline-block; padding: 0.4rem 0.8rem; border-radius: 0.5rem; border: 1px solid #ccc; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: all 0.2s; margin: 0 0.2rem; }
+    .btn-status.active { background: #22c55e; color: white; border-color: #16a34a; }
+    .btn-status:not(.active) { background: white; color: #666; }
+    .status-present.active { background: #22c55e; }
+    .status-absent.active { background: #ef4444; }
+  </style>
+  <script>
+    const BOOTSTRAP = <?= bootstrapJson ?>;
+  </script>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<div id="bootSplash" class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-soft)]">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-xl px-6 py-5 text-center border border-pink-100">
+    <h2 class="text-lg font-semibold text-pink-700 mb-1">ยินดีต้อนรับเข้าสู่ระบบจัดการสภานักเรียน</h2>
+    <p class="text-xs text-gray-500 mb-4">กำลังเตรียมข้อมูล กรุณารอสักครู่...</p>
+    <div class="w-full bg-gray-100 rounded-full h-3 overflow-hidden mb-2">
+      <div id="bootProgressBar" class="h-3 rounded-full bg-gradient-to-r from-pink-500 via-rose-500 to-amber-400 transition-all duration-150" style="width:0%"></div>
+    </div>
+    <div id="bootProgressLabel" class="text-xs text-gray-500 mb-1">กำลังเริ่มต้น...</div>
+  </div>
+</div>
+
+<nav class="no-print bg-[var(--primary-color)] text-white shadow">
+  <div class="max-w-6xl mx-auto px-3 sm:px-4 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-2">
+      <span id="navLogo" class="inline-flex"></span>
+      <span id="navTitle" class="font-semibold text-sm sm:text-lg">ระบบจัดการสภานักเรียน</span>
+    </div>
+    <button id="btnToggleAdmin" class="text-xs sm:text-sm px-3 py-1.5 rounded-full border border-white/80 bg-white/10 hover:bg-white/20 transition">เข้าสู่ระบบแอดมิน</button>
+  </div>
+</nav>
+
+<main class="flex-1">
+  <div class="max-w-6xl mx-auto px-3 sm:px-4 py-4">
+    <div class="card-soft mb-4 no-print">
+      <div class="p-4 sm:p-5 flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <img id="headerLogo" src="" alt="Logo" class="w-12 h-12 sm:w-16 sm:h-16 object-contain hidden">
+          <div>
+            <h1 class="page-header-title mb-1 text-lg sm:text-2xl" id="headerTitle">ระบบจัดการสภานักเรียน</h1>
+            <div class="page-header-subtitle text-xs sm:text-sm">โรงเรียนมูลนิธิอาซิซสถาน · Student Council Management</div>
+            <div class="text-[11px] sm:text-xs text-gray-500 mt-1" id="headerUserInfo"></div>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 justify-end w-full sm:w-auto">
+          <button id="btnAddMember" class="hidden flex-1 sm:flex-none px-3 py-1.5 rounded-full bg-[var(--primary-color)] text-white text-xs sm:text-sm shadow hover:bg-pink-700 transition">➕ เพิ่มสมาชิก</button>
+          <button id="btnAttendance" class="hidden flex-1 sm:flex-none px-3 py-1.5 rounded-full bg-amber-500 text-white text-xs sm:text-sm shadow hover:bg-amber-600 transition">✅ เช็คชื่อ</button>
+          <button id="btnEvaluation" class="hidden flex-1 sm:flex-none px-3 py-1.5 rounded-full bg-indigo-500 text-white text-xs sm:text-sm shadow hover:bg-indigo-600 transition">📊 ประเมิน</button>
+          <button type="button" onclick="window.print()" class="flex-1 sm:flex-none px-3 py-1.5 rounded-full border border-gray-300 bg-white text-xs sm:text-sm text-gray-700 hover:bg-gray-50">🖨️ พิมพ์</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="alertContainer" class="no-print mb-3"></div>
+    <div id="dashboardRow" class="no-print grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-4"></div>
+
+    <div class="card-soft">
+      <div class="border-b border-gray-100 p-3 sm:p-4 no-print">
+        <div class="w-full sm:w-72">
+          <input type="text" id="searchInput" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 bg-white" placeholder="ค้นหา รหัส / ชื่อ / ชั้น / ฝ่าย">
+        </div>
+        <div class="mt-2 text-xs text-gray-500" id="activeFilters"></div>
+      </div>
+
+      <div class="overflow-x-auto py-2">
+        <table class="min-w-full text-xs sm:text-sm text-left">
+          <thead class="bg-gray-50 text-gray-700 text-[11px] sm:text-xs uppercase">
+          <tr>
+            <th class="px-3 sm:px-4 py-2 w-10 sm:w-12">#</th>
+            <th class="px-3 sm:px-4 py-2">รหัส</th>
+            <th class="px-3 sm:px-4 py-2">ชื่อ-สกุล</th>
+            <th class="px-3 sm:px-4 py-2">ชั้น</th>
+            <th class="px-3 sm:px-4 py-2 no-print">ฝ่าย</th>
+            <th class="px-3 sm:px-4 py-2 no-print text-right">% เข้าร่วม</th>
+            <th class="px-3 sm:px-4 py-2 w-32 sm:w-40 no-print text-center">จัดการ</th>
+            <th class="print-only px-2 py-2 text-[10px] text-gray-500"></th>
+            <th class="print-only px-2 py-2 text-[10px] text-gray-500"></th>
+            <th class="print-only px-2 py-2 text-[10px] text-gray-500"></th>
+            <th class="print-only px-2 py-2 text-[10px] text-gray-500"></th>
+            <th class="print-only px-2 py-2 text-[10px] text-gray-500"></th>
+          </tr>
+          </thead>
+          <tbody id="memberTbody" class="divide-y divide-gray-100 bg-white"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer class="text-center text-gray-500 text-[11px] sm:text-xs py-4">
+  <span id="footerText">© Azizstan Student Council</span>
+</footer>
+
+<!-- MODAL MEMBER -->
+<div id="memberModal" class="no-print fixed inset-0 z-40 hidden items-center justify-center bg-black/40 px-2 sm:px-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+    <form id="memberForm" class="flex flex-col h-full">
+      <input type="hidden" id="memberId">
+      <div class="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-gray-100">
+        <h5 class="font-semibold text-base" id="memberModalTitle">เพิ่มสมาชิก</h5>
+        <button type="button" class="btn-close text-gray-400 hover:text-gray-600" id="memberModalCloseIcon">✕</button>
+      </div>
+      <div class="px-4 sm:px-5 py-3 sm:py-4 overflow-y-auto">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div class="lg:col-span-2 space-y-3">
+            <div>
+              <label class="block text-sm mb-1">รหัสนักเรียน</label>
+              <input type="text" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" id="studentCodeInput" required>
+              <p class="mt-1 text-[11px] text-gray-500">กรอกแล้วกด Enter ระบบจะดึงข้อมูลให้อัตโนมัติ</p>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-sm mb-1">ชื่อ-สกุล</label>
+                <input type="text" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" id="fullnameInput" required>
+              </div>
+              <div>
+                <label class="block text-sm mb-1">ชั้น</label>
+                <input type="text" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" id="classNameInput" required>
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm mb-1">ฝ่าย</label>
+              <select id="departmentInput" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-pink-400">
+                <option value="">- ไม่ระบุ -</option>
+              </select>
+            </div>
+          </div>
+          <div class="space-y-2">
+            <label class="block text-sm mb-1">รูปนักเรียน</label>
+            <div class="border border-dashed border-gray-300 rounded-xl p-2 text-center bg-gray-50 min-h-[150px] flex items-center justify-center">
+              <img id="studentImagePreview" src="" class="max-w-full max-h-40 object-cover rounded-lg hidden">
+              <div id="studentImagePlaceholder" class="text-xs text-gray-400">ยังไม่มีรูป</div>
+            </div>
+            <div class="text-xs text-gray-500" id="studentInfoText">กรุณากรอกรหัสนักเรียน</div>
+          </div>
+        </div>
+      </div>
+      <div class="px-4 sm:px-5 py-3 border-t border-gray-100 flex justify-end gap-2">
+        <button type="button" class="px-3 py-1.5 rounded-full border border-gray-300 text-sm text-gray-700 hover:bg-gray-50" id="memberModalCancel">ยกเลิก</button>
+        <button type="submit" class="px-4 py-1.5 rounded-full bg-emerald-600 text-white text-sm hover:bg-emerald-700">บันทึก</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL ATTENDANCE -->
+<div id="attendanceModal" class="no-print fixed inset-0 z-40 hidden items-center justify-center bg-black/40 px-2 sm:px-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[92vh] flex flex-col">
+    <form id="attendanceForm" class="flex flex-col h-full">
+      <div class="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-gray-100">
+        <h5 class="font-semibold text-base">✅ เช็คชื่อกิจกรรม</h5>
+        <button type="button" class="btn-close" id="attendanceModalCloseIcon">✕</button>
+      </div>
+      <div class="px-4 sm:px-5 py-3 space-y-3 overflow-y-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-sm mb-1">วันที่</label>
+            <input type="date" id="attDateInput" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" required>
+          </div>
+          <div class="sm:col-span-1 lg:col-span-2">
+            <label class="block text-sm mb-1">กิจกรรม</label>
+            <select id="attActivitySelect" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400" required></select>
+          </div>
+          <div>
+            <label class="block text-sm mb-1">กรองฝ่าย</label>
+            <select id="attDeptFilter" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400">
+              <option value="">ทุกฝ่าย</option>
+            </select>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button type="button" id="btnCheckAll" class="px-3 py-1.5 rounded-full bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700">✓ เช็คทั้งหมด</button>
+          <button type="button" id="btnUncheckAll" class="px-3 py-1.5 rounded-full bg-rose-600 text-white text-xs font-semibold hover:bg-rose-700">✕ ยกเลิกทั้งหมด</button>
+        </div>
+        <div id="attendanceMemberList" class="border border-gray-200 rounded-xl max-h-[52vh] overflow-y-auto text-[11px] sm:text-xs bg-white"></div>
+      </div>
+      <div class="px-4 sm:px-5 py-3 border-t border-gray-100 flex justify-between items-center gap-2">
+        <div class="text-[11px] text-gray-500">ทำการเช็คชื่อสมาชิก</div>
+        <div class="flex gap-2">
+          <button type="button" class="px-3 py-1.5 rounded-full border border-gray-300 text-sm text-gray-700 hover:bg-gray-50" id="attendanceModalCancel">ยกเลิก</button>
+          <button type="submit" class="px-4 py-1.5 rounded-full bg-amber-500 text-white text-sm hover:bg-amber-600">บันทึก</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EVALUATION -->
+<div id="evaluationModal" class="no-print fixed inset-0 z-40 hidden items-center justify-center bg-black/40 px-2 sm:px-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[92vh] flex flex-col">
+    <form id="evaluationForm" class="flex flex-col h-full">
+      <div class="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-gray-100">
+        <h5 class="font-semibold text-base">📊 ประเมินการทำงาน</h5>
+        <button type="button" class="btn-close" id="evaluationModalCloseIcon">✕</button>
+      </div>
+      <div class="px-4 sm:px-5 py-3 space-y-3 overflow-y-auto">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div class="lg:col-span-2">
+            <label class="block text-sm mb-1">หัวข้อประเมิน</label>
+            <select id="evalCriteriaSelect" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400" required></select>
+          </div>
+          <div>
+            <label class="block text-sm mb-1">กรองฝ่าย</label>
+            <select id="evalDeptFilter" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400">
+              <option value="">ทุกฝ่าย</option>
+            </select>
+          </div>
+        </div>
+        <div id="evaluationMemberList" class="border border-gray-200 rounded-xl max-h-[52vh] overflow-y-auto text-[11px] sm:text-xs bg-white"></div>
+      </div>
+      <div class="px-4 sm:px-5 py-3 border-t border-gray-100 flex justify-between items-center gap-2">
+        <div class="text-[11px] text-gray-500">ระดับ: ดีมาก | ดี | พอใช้ | ไม่ผ่าน</div>
+        <div class="flex gap-2">
+          <button type="button" class="px-3 py-1.5 rounded-full border border-gray-300 text-sm text-gray-700 hover:bg-gray-50" id="evaluationModalCancel">ยกเลิก</button>
+          <button type="submit" class="px-4 py-1.5 rounded-full bg-indigo-500 text-white text-sm hover:bg-indigo-600">บันทึก</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const DEFAULT_ACTIVITIES = ['ประชุมสภานักเรียน', 'กิจกรรมหน้าเสาธง', 'เวรดูแลนักเรียนช่วงเช้า'];
+  const DEFAULT_EVAL_LEVELS = ['ดีมาก', 'ดี', 'พอใช้', 'ไม่ผ่าน'];
+  const PRINT_BLANK_COLS = new Array(5).fill('<td class="print-only px-2 py-2">&nbsp;</td>').join('');
+
+  const state = {
+    settings:      BOOTSTRAP.settings || {},
+    members:       BOOTSTRAP.members || [],
+    departments:   BOOTSTRAP.departments || [],
+    genderSummary: BOOTSTRAP.genderSummary || {},
+    attendanceSummary: BOOTSTRAP.attendanceSummary || {},
+    evaluationSummary: BOOTSTRAP.evaluationSummary || {},
+    activities:   BOOTSTRAP.activities || DEFAULT_ACTIVITIES,
+    evalLevels:   BOOTSTRAP.evalLevels || DEFAULT_EVAL_LEVELS,
+    evalCriteria: BOOTSTRAP.evalCriteria || [],
+    adminLoggedIn: false,
+    adminToken:    '',
+    adminUsername: '',
+    filterGender:  '',
+    filterDept:    '',
+    searchText:    '',
+    currentEvalCriteria: ''
+  };
+
+  function showAlert(type, text, timeoutMs) {
+    const container = document.getElementById('alertContainer');
+    if (!container) return;
+    const div = document.createElement('div');
+    div.className = `alert alert-${type}`;
+    div.innerHTML = `<span>${text}</span><button type="button" class="btn-close" onclick="this.parentElement.remove()">✕</button>`;
+    container.appendChild(div);
+    if (timeoutMs) setTimeout(() => { div.remove(); }, timeoutMs);
+  }
+
+  function renderHeader() {
+    document.getElementById('navTitle').textContent = state.settings.siteName || 'ระบบจัดการสภานักเรียน';
+    document.getElementById('headerTitle').textContent = state.settings.siteName || 'ระบบจัดการสภานักเรียน';
+    document.getElementById('footerText').textContent = state.settings.footerText || '© Azizstan Student Council';
+
+    const logo = state.settings.logoUrl || '';
+    const headerLogo = document.getElementById('headerLogo');
+    const navLogo = document.getElementById('navLogo');
+    if (logo) {
+      headerLogo.src = logo;
+      headerLogo.classList.remove('hidden');
+      navLogo.innerHTML = `<img src="${logo}" alt="logo" class="h-7">`;
+    } else {
+      headerLogo.classList.add('hidden');
+      navLogo.textContent = '';
+    }
+
+    const infoEl = document.getElementById('headerUserInfo');
+    infoEl.textContent = state.adminLoggedIn ? `ลงชื่อเข้าใช้แอดมิน: ${state.adminUsername}` : '';
+
+    const btnAdmin = document.getElementById('btnToggleAdmin');
+    btnAdmin.textContent = state.adminLoggedIn ? 'ออกจากระบบแอดมิน' : 'เข้าสู่ระบบแอดมิน';
+
+    ['btnAddMember', 'btnAttendance', 'btnEvaluation'].forEach(id => {
+      const btn = document.getElementById(id);
+      if (btn) btn.classList.toggle('hidden', !state.adminLoggedIn);
+    });
+  }
+
+  function renderDashboard() {
+    const container = document.getElementById('dashboardRow');
+    container.innerHTML = '';
+    Object.keys(state.genderSummary || {}).forEach(g => {
+      const info = state.genderSummary[g];
+      const total = info.total || 0;
+      let icon = '👤';
+      if (g.includes('ชาย')) icon = '👦';
+      else if (g.includes('หญิง')) icon = '👧';
+
+      const deptButtons = Object.keys(info.departments || {}).map(d => {
+        const cnt = info.departments[d];
+        return `<button type="button" class="inline-flex items-center justify-center rounded-full border border-gray-300 px-3 py-1 text-xs text-gray-700 hover:bg-gray-50 gender-dept-btn" data-gender="${g}" data-department="${d}">${d} (${cnt})</button>`;
+      }).join('');
+
+      const col = document.createElement('div');
+      col.innerHTML = `<div class="card-soft gender-card ${state.filterGender === g ? 'active':''}" data-gender="${g}"><div class="p-3"><div class="flex items-center justify-between gap-3"><div><div class="font-semibold text-sm">${g}</div><div class="text-xs text-gray-500">รวม ${total} คน</div></div><div class="text-2xl">${icon}</div></div><div class="mt-2 gender-dept-list ${state.filterGender === g ? '' : 'hidden'}">${deptButtons}</div></div></div>`;
+      container.appendChild(col.firstElementChild);
+    });
+  }
+
+  function applyTableFilters() {
+    const tbody = document.getElementById('memberTbody');
+    const rows = tbody.querySelectorAll('tr');
+    let runningIndex = 1;
+
+    rows.forEach(tr => {
+      const g = (tr.getAttribute('data-gender') || '').toLowerCase();
+      const d = (tr.getAttribute('data-department') || '').toLowerCase();
+      const text = tr.innerText.toLowerCase();
+
+      let show = true;
+      if (state.filterGender && g !== state.filterGender.toLowerCase()) show = false;
+      if (state.filterDept && d !== state.filterDept.toLowerCase()) show = false;
+      if (state.searchText && !text.includes(state.searchText.toLowerCase())) show = false;
+
+      if (show) {
+        tr.style.display = '';
+        const idxCell = tr.querySelector('td');
+        if (idxCell) idxCell.textContent = runningIndex++;
+      } else {
+        tr.style.display = 'none';
+      }
+    });
+
+    const fEl = document.getElementById('activeFilters');
+    const chips = [];
+    if (state.filterGender) chips.push(`<span class="inline-flex items-center rounded-full bg-pink-100 text-pink-800 px-2 py-0.5 mr-1 filter-chip">เพศ: ${state.filterGender}</span>`);
+    if (state.filterDept) chips.push(`<span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5 mr-1 filter-chip">ฝ่าย: ${state.filterDept}</span>`);
+    if (state.searchText) chips.push(`<span class="inline-flex items-center rounded-full bg-gray-100 text-gray-700 px-2 py-0.5 mr-1 filter-chip">ค้นหา: ${state.searchText}</span>`);
+    fEl.innerHTML = chips.join('');
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('memberTbody');
+    tbody.innerHTML = '';
+
+    if (!state.members.length) {
+      tbody.innerHTML = `<tr><td colspan="12" class="px-4 py-4 text-center text-gray-400 text-sm">ยังไม่มีข้อมูลสภานักเรียน</td></tr>`;
+      return;
+    }
+
+    state.members.forEach((m) => {
+      const name = m.stu_fullname || m.fullname || '';
+      const classFromStu = [m.stu_class_general, m.stu_class_religion].filter(Boolean).join(' / ');
+      const displayClass = classFromStu || m.class_name || '';
+      const gender = (m.stu_gender || '').trim() || 'ไม่ระบุเพศ';
+      const deptName = m.department_name || 'ไม่ระบุฝ่าย';
+      const imgUrl = m.stu_image_url || '';
+      const initial = name ? name.substr(0,1) : '?';
+
+      const att = state.attendanceSummary[String(m.id)] || {};
+      const attPercent = typeof att.percent === 'number' ? `${Math.round(att.percent)}%` : '-';
+
+      const tr = document.createElement('tr');
+      tr.setAttribute('data-gender', gender);
+      tr.setAttribute('data-department', deptName);
+      tr.innerHTML = `
+        <td class="px-3 sm:px-4 py-2 text-[11px] sm:text-xs text-gray-500"></td>
+        <td class="px-3 sm:px-4 py-2 text-[11px] sm:text-sm text-gray-700">${m.student_code || ''}</td>
+        <td class="px-3 sm:px-4 py-2">
+          <div class="flex items-center gap-2">
+            ${imgUrl ? `<img src="${imgUrl}" class="w-7 h-7 rounded-full object-cover">` : `<div class="avatar-circle text-xs sm:text-sm">${initial}</div>`}
+            <div>
+              <div class="text-[11px] sm:text-sm text-gray-800">${name}</div>
+              <div class="text-[10px] sm:text-xs text-gray-400">${gender}</div>
+            </div>
+          </div>
+        </td>
+        <td class="px-3 sm:px-4 py-2 text-[11px] sm:text-sm text-gray-700">${displayClass}</td>
+        <td class="px-3 sm:px-4 py-2 text-[11px] sm:text-sm text-gray-700 no-print">${deptName}</td>
+        <td class="px-3 sm:px-4 py-2 text-[11px] sm:text-sm text-right text-gray-700 no-print">${attPercent}</td>
+        <td class="px-3 sm:px-4 py-2 text-[11px] sm:text-xs no-print text-center">
+          ${state.adminLoggedIn ? `
+            <button class="btn-edit inline-flex items-center justify-center px-2 py-1 rounded-full border border-pink-300 text-pink-700 mr-1 hover:bg-pink-50" data-id="${m.id}">✏️ แก้</button>
+            <button class="btn-delete inline-flex items-center justify-center px-2 py-1 rounded-full border border-red-300 text-red-700 hover:bg-red-50" data-id="${m.id}">🗑️ ลบ</button>
+          ` : '<span class="text-gray-400">อ่านอย่างเดียว</span>'}
+        </td>
+        ${PRINT_BLANK_COLS}
+      `;
+      tbody.appendChild(tr);
+    });
+
+    applyTableFilters();
+  }
+
+  function renderDepartmentsSelect() {
+    const sel = document.getElementById('departmentInput');
+    sel.innerHTML = `<option value="">- ไม่ระบุ -</option>`;
+    state.departments.filter(d => d.is_active).forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = d.name_th;
+      sel.appendChild(opt);
+    });
+
+    ['attDeptFilter', 'evalDeptFilter'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.innerHTML = `<option value="">ทุกฝ่าย</option>`;
+        state.departments.filter(d => d.is_active).forEach(d => {
+          const opt = document.createElement('option');
+          opt.value = d.name_th;
+          opt.textContent = d.name_th;
+          el.appendChild(opt);
+        });
+      }
+    });
+  }
+
+  function renderActivitySelect() {
+    const sel = document.getElementById('attActivitySelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    (state.activities || DEFAULT_ACTIVITIES).forEach((name, idx) => {
+      const opt = document.createElement('option');
+      opt.value = String(idx + 1);
+      opt.textContent = name;
+      sel.appendChild(opt);
+    });
+  }
+
+  function renderEvalCriteriaSelect() {
+    const sel = document.getElementById('evalCriteriaSelect');
+    if (!sel) return;
+    sel.innerHTML = '';
+    (state.evalCriteria || []).forEach(crit => {
+      const opt = document.createElement('option');
+      opt.value = crit.name;
+      opt.textContent = crit.name;
+      sel.appendChild(opt);
+    });
+    if (sel.options.length > 0) {
+      sel.selectedIndex = 0;
+      state.currentEvalCriteria = sel.options[0].value;
+    }
+  }
+
+  function renderAll() {
+    renderHeader();
+    renderDashboard();
+    renderDepartmentsSelect();
+    renderActivitySelect();
+    renderEvalCriteriaSelect();
+    renderTable();
+  }
+
+  function startBootLoader() {
+    const splash = document.getElementById('bootSplash');
+    const bar = document.getElementById('bootProgressBar');
+    const label = document.getElementById('bootProgressLabel');
+
+    if (!splash) return;
+
+    let progress = 0;
+    const fastTimer = setInterval(() => {
+      progress += 4;
+      if (bar) bar.style.width = progress + '%';
+      if (label) label.textContent = `กำลังดาวน์โหลดข้อมูล ${progress}%`;
+      if (progress >= 78) {
+        clearInterval(fastTimer);
+        let p = progress;
+        const slowTimer = setInterval(() => {
+          p += 1;
+          if (bar) bar.style.width = p + '%';
+          if (label) label.textContent = `กำลังดาวน์โหลดข้อมูล ${p}%`;
+          if (p >= 100) {
+            clearInterval(slowTimer);
+            setTimeout(() => splash.classList.add('hidden'), 250);
+          }
+        }, 130);
+      }
+    }, 80);
+  }
+
+  function openMemberModal(member) {
+    const modal = document.getElementById('memberModal');
+    const modalTitle = document.getElementById('memberModalTitle');
+    const idEl = document.getElementById('memberId');
+    const codeEl = document.getElementById('studentCodeInput');
+    const nameEl = document.getElementById('fullnameInput');
+    const classEl = document.getElementById('classNameInput');
+    const deptEl = document.getElementById('departmentInput');
+    const imgPrev = document.getElementById('studentImagePreview');
+    const imgPh = document.getElementById('studentImagePlaceholder');
+    const infoEl = document.getElementById('studentInfoText');
+
+    if (member) {
+      modalTitle.textContent = 'แก้ไขสมาชิก';
+      idEl.value = member.id;
+      codeEl.value = member.student_code || '';
+      const name = member.stu_fullname || member.fullname || '';
+      nameEl.value = name;
+      const cls = [member.stu_class_general, member.stu_class_religion].filter(Boolean).join(' / ');
+      classEl.value = cls || member.class_name || '';
+      deptEl.value = member.department_id || '';
+
+      const img = member.stu_image_url || '';
+      if (img) {
+        imgPrev.src = img;
+        imgPrev.classList.remove('hidden');
+        imgPh.classList.add('hidden');
+      } else {
+        imgPrev.src = '';
+        imgPrev.classList.add('hidden');
+        imgPh.classList.remove('hidden');
+      }
+
+      const pieces = [];
+      if (member.stu_gender) pieces.push(member.stu_gender);
+      if (cls) pieces.push(cls);
+      infoEl.textContent = pieces.join(' · ');
+    } else {
+      modalTitle.textContent = 'เพิ่มสมาชิก';
+      idEl.value = '';
+      codeEl.value = '';
+      nameEl.value = '';
+      classEl.value = '';
+      deptEl.value = '';
+      imgPrev.src = '';
+      imgPrev.classList.add('hidden');
+      imgPh.classList.remove('hidden');
+      infoEl.textContent = 'กรุณากรอกรหัสนักเรียน';
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeMemberModal() {
+    document.getElementById('memberModal').classList.add('hidden');
+    document.getElementById('memberModal').classList.remove('flex');
+  }
+
+  function resetStudentDisplay() {
+    document.getElementById('studentImagePreview').classList.add('hidden');
+    document.getElementById('studentImagePlaceholder').classList.remove('hidden');
+    document.getElementById('studentInfoText').textContent = 'กรุณากรอกรหัสนักเรียน';
+  }
+
+  function lookupStudentByCode() {
+    const code = document.getElementById('studentCodeInput').value.trim();
+    if (!code) { resetStudentDisplay(); return; }
+
+    google.script.run.withSuccessHandler((res) => {
+      if (!res || !res.ok) {
+        showAlert('warning', res?.message || 'ไม่พบนักเรียน', 3000);
+        resetStudentDisplay();
+        return;
+      }
+      const s = res.data || {};
+      if (s.fullname) document.getElementById('fullnameInput').value = s.fullname;
+      const cls = [s.class_general, s.class_religion].filter(Boolean).join(' / ');
+      if (cls) document.getElementById('classNameInput').value = cls;
+
+      const imgPrev = document.getElementById('studentImagePreview');
+      const imgPh = document.getElementById('studentImagePlaceholder');
+      if (s.image_url) {
+        imgPrev.src = s.image_url;
+        imgPrev.classList.remove('hidden');
+        imgPh.classList.add('hidden');
+      } else {
+        resetStudentDisplay();
+      }
+
+      const pieces = [];
+      if (s.gender) pieces.push(s.gender);
+      if (cls) pieces.push(cls);
+      document.getElementById('studentInfoText').textContent = pieces.length ? pieces.join(' · ') : 'ดึงข้อมูลสำเร็จ';
+    }).lookupStudent(code);
+  }
+
+  function handleMemberFormSubmit(e) {
+    e.preventDefault();
+    if (!state.adminLoggedIn || !state.adminToken) {
+      showAlert('danger', 'ต้องลงชื่อเข้าใช้แอดมิน', 3000);
+      return;
+    }
+
+    const member = {
+      id: document.getElementById('memberId').value || '',
+      student_code: document.getElementById('studentCodeInput').value.trim(),
+      fullname: document.getElementById('fullnameInput').value.trim(),
+      class_name: document.getElementById('classNameInput').value.trim(),
+      department_id: document.getElementById('departmentInput').value || ''
+    };
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        if (!res || !res.ok) {
+          showAlert('danger', 'บันทึกไม่สำเร็จ', 3000);
+          return;
+        }
+        state.members = res.members || [];
+        state.genderSummary = res.genderSummary || {};
+        state.attendanceSummary = res.attendanceSummary || state.attendanceSummary;
+        state.evaluationSummary = res.evaluationSummary || state.evaluationSummary;
+        renderDashboard();
+        renderTable();
+        showAlert('success', '✓ บันทึกข้อมูลเรียบร้อย', 2500);
+        closeMemberModal();
+      })
+      .withFailureHandler((err) => {
+        showAlert('danger', '✕ เกิดข้อผิดพลาด: ' + err.message, 4000);
+      })
+      .saveMember(member, state.adminToken);
+  }
+
+  function handleDeleteMember(id) {
+    if (!state.adminLoggedIn) {
+      showAlert('danger', 'ต้องลงชื่อเข้าใช้แอดมิน', 3000);
+      return;
+    }
+    if (!confirm('ยืนยันการลบข้อมูลนี้?')) return;
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        if (!res || !res.ok) {
+          showAlert('danger', 'ลบไม่สำเร็จ', 3000);
+          return;
+        }
+        state.members = res.members || [];
+        state.genderSummary = res.genderSummary || {};
+        renderDashboard();
+        renderTable();
+        showAlert('success', '✓ ลบข้อมูลเรียบร้อย', 2500);
+      })
+      .withFailureHandler((err) => {
+        showAlert('danger', '✕ เกิดข้อผิดพลาด: ' + err.message, 4000);
+      })
+      .deleteMember(id, state.adminToken);
+  }
+
+  function handleToggleAdmin() {
+    if (state.adminLoggedIn) {
+      state.adminLoggedIn = false;
+      state.adminToken = '';
+      state.adminUsername = '';
+      renderHeader();
+      renderTable();
+      showAlert('info', 'ออกจากระบบแอดมินแล้ว', 2000);
+      return;
+    }
+
+    const username = prompt('ชื่อผู้ใช้แอดมิน:');
+    if (!username) return;
+    const password = prompt('รหัสผ่านแอดมิน:');
+    if (password === null) return;
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        if (res && res.ok) {
+          state.adminLoggedIn = true;
+          state.adminToken = res.token;
+          state.adminUsername = res.username;
+          renderHeader();
+          renderTable();
+          showAlert('success', '✓ เข้าสู่ระบบแอดมินสำเร็จ', 2000);
+        } else {
+          showAlert('danger', res?.message || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง', 3000);
+        }
+      })
+      .withFailureHandler((err) => {
+        showAlert('danger', '✕ เกิดข้อผิดพลาด: ' + err.message, 4000);
+      })
+      .adminLogin({ username, password });
+  }
+
+  function openAttendanceModal() {
+    if (!state.adminLoggedIn) {
+      showAlert('danger', 'กรุณาเข้าสู่ระบบแอดมิน', 3000);
+      return;
+    }
+    const modal = document.getElementById('attendanceModal');
+    const dateInput = document.getElementById('attDateInput');
+    if (!dateInput.value) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      dateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+    renderAttendanceMemberList();
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+  }
+
+  function closeAttendanceModal() {
+    document.getElementById('attendanceModal').classList.add('hidden');
+    document.getElementById('attendanceModal').classList.remove('flex');
+  }
+
+  function renderAttendanceMemberList() {
+    const container = document.getElementById('attendanceMemberList');
+    container.innerHTML = '';
+
+    if (!state.members.length) {
+      container.innerHTML = `<div class="px-3 py-3 text-center text-gray-400 text-xs">ยังไม่มีข้อมูลสภานักเรียน</div>`;
+      return;
+    }
+
+    state.members.forEach((m) => {
+      const name = m.stu_fullname || m.fullname || '';
+      const classFromStu = [m.stu_class_general, m.stu_class_religion].filter(Boolean).join(' / ');
+      const displayClass = classFromStu || m.class_name || '';
+      const deptName = m.department_name || 'ไม่ระบุฝ่าย';
+
+      const row = document.createElement('div');
+      row.className = 'flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 px-3 py-2 border-b last:border-b-0 border-gray-100 hover:bg-gray-50';
+      row.setAttribute('data-department', deptName.toLowerCase());
+      row.setAttribute('data-member-id', m.id);
+
+      row.innerHTML = `
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2">
+            <span class="inline-flex items-center justify-center w-6 text-[11px] text-gray-400">${m.student_code || ''}</span>
+            <div class="min-w-0">
+              <div class="text-[11px] sm:text-xs text-gray-800 truncate">${name}</div>
+              <div class="text-[10px] text-gray-400 truncate">${displayClass} · ${deptName}</div>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-1">
+          <button type="button" class="btn-status status-present" data-member-id="${m.id}" data-status="present">✓ เข้าร่วม</button>
+          <button type="button" class="btn-status status-absent" data-member-id="${m.id}" data-status="absent">✕ ไม่เข้า</button>
+        </div>
+        <div class="sm:w-40">
+          <input type="text" class="att-remark w-full rounded-lg border border-gray-200 px-2 py-1 text-[10px] sm:text-xs focus:outline-none focus:ring-1 focus:ring-amber-400" data-member-id="${m.id}" placeholder="หมายเหตุ">
+        </div>
+      `;
+      container.appendChild(row);
+    });
+
+    applyAttendanceFilters();
+  }
+
+  function applyAttendanceFilters() {
+    const dSel = document.getElementById('attDeptFilter');
+    const dFilter = (dSel && dSel.value) ? dSel.value.toLowerCase() : '';
+    const container = document.getElementById('attendanceMemberList');
+    const rows = container.querySelectorAll('[data-department]');
+    rows.forEach(row => {
+      const d = (row.getAttribute('data-department') || '').toLowerCase();
+      row.style.display = (!dFilter || d === dFilter) ? '' : 'none';
+    });
+  }
+
+  function handleAttendanceSubmit(e) {
+    e.preventDefault();
+    if (!state.adminLoggedIn || !state.adminToken) {
+      showAlert('danger', 'ต้องลงชื่อเข้าใช้แอดมิน', 3000);
+      return;
+    }
+
+    const dateVal = document.getElementById('attDateInput').value;
+    const activityId = document.getElementById('attActivitySelect').value;
+
+    if (!dateVal || !activityId) {
+      showAlert('warning', 'กรุณาเลือกวันที่และกิจกรรม', 3000);
+      return;
+    }
+
+    const records = [];
+    document.querySelectorAll('.btn-status.active').forEach(btn => {
+      const memberId = btn.getAttribute('data-member-id');
+      const status = btn.getAttribute('data-status');
+      const remarkEl = document.querySelector(`.att-remark[data-member-id="${memberId}"]`);
+      const remark = remarkEl ? remarkEl.value.trim() : '';
+      records.push({ memberId, status, remark });
+    });
+
+    if (!records.length) {
+      showAlert('warning', 'ยังไม่ได้เลือกผลการเช็คชื่อ', 3000);
+      return;
+    }
+
+    const payload = { date: dateVal, activityId, records };
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        if (!res || !res.ok) {
+          showAlert('danger', res?.message || 'บันทึกไม่สำเร็จ', 4000);
+          return;
+        }
+        state.attendanceSummary = res.attendanceSummary || state.attendanceSummary;
+        renderTable();
+        showAlert('success', '✓ ' + res.message, 2500);
+        closeAttendanceModal();
+      })
+      .withFailureHandler((err) => {
+        showAlert('danger', '✕ เกิดข้อผิดพลาด: ' + err.message, 4000);
+      })
+      .saveAttendanceBatch(payload, state.adminToken);
+  }
+
+  function openEvaluationModal() {
+    if (!state.adminLoggedIn) {
+      showAlert('danger', 'กรุณาเข้าสู่ระบบแอดมิน', 3000);
+      return;
+    }
+    renderEvaluationMemberList();
+    document.getElementById('evaluationModal').classList.remove('hidden');
+    document.getElementById('evaluationModal').classList.add('flex');
+  }
+
+  function closeEvaluationModal() {
+    document.getElementById('evaluationModal').classList.add('hidden');
+    document.getElementById('evaluationModal').classList.remove('flex');
+  }
+
+  function renderEvaluationMemberList() {
+    const container = document.getElementById('evaluationMemberList');
+    container.innerHTML = '';
+
+    if (!state.members.length) {
+      container.innerHTML = `<div class="px-3 py-3 text-center text-gray-400 text-xs">ยังไม่มีข้อมูล</div>`;
+      return;
+    }
+
+    const levels = state.evalLevels || DEFAULT_EVAL_LEVELS;
+
+    state.members.forEach((m) => {
+      const name = m.stu_fullname || m.fullname || '';
+      const classFromStu = [m.stu_class_general, m.stu_class_religion].filter(Boolean).join(' / ');
+      const displayClass = classFromStu || m.class_name || '';
+      const deptName = m.department_name || 'ไม่ระบุฝ่าย';
+
+      const row = document.createElement('div');
+      row.className = 'flex flex-col sm:flex-row sm:items-center gap-2 px-3 py-2 border-b last:border-b-0 border-gray-100 hover:bg-gray-50';
+      row.setAttribute('data-department', deptName.toLowerCase());
+
+      const btns = levels.map(l => `<button type="button" class="eval-btn px-2 py-1 rounded-full border text-[10px] sm:text-xs" data-member-id="${m.id}" data-level="${l}">${l}</button>`).join('');
+
+      row.innerHTML = `
+        <div class="flex-1 min-w-0 sm:w-40">
+          <div class="text-[11px] sm:text-xs text-gray-800">${name}</div>
+          <div class="text-[10px] text-gray-400">${displayClass} · ${deptName}</div>
+        </div>
+        <div class="flex items-center gap-1 flex-wrap">
+          ${btns}
+        </div>
+        <div class="sm:w-40">
+          <input type="text" class="eval-remark w-full rounded-lg border border-gray-200 px-2 py-1 text-[10px] sm:text-xs focus:outline-none focus:ring-1 focus:ring-indigo-400" data-member-id="${m.id}" placeholder="หมายเหตุ">
+        </div>
+      `;
+      container.appendChild(row);
+    });
+
+    applyEvalFilters();
+  }
+
+  function applyEvalFilters() {
+    const dSel = document.getElementById('evalDeptFilter');
+    const dFilter = (dSel && dSel.value) ? dSel.value.toLowerCase() : '';
+    document.querySelectorAll('[data-department]', document.getElementById('evaluationMemberList')).forEach(row => {
+      const d = (row.getAttribute('data-department') || '').toLowerCase();
+      row.style.display = (!dFilter || d === dFilter) ? '' : 'none';
+    });
+  }
+
+  function handleEvaluationSubmit(e) {
+    e.preventDefault();
+    if (!state.adminLoggedIn || !state.adminToken) {
+      showAlert('danger', 'ต้องลงชื่อเข้าใช้แอดมิน', 3000);
+      return;
+    }
+
+    const criteria = document.getElementById('evalCriteriaSelect').value;
+    if (!criteria) {
+      showAlert('warning', 'กรุณาเลือกหัวข้อประเมิน', 3000);
+      return;
+    }
+
+    const records = [];
+    document.querySelectorAll('.eval-btn.active').forEach(btn => {
+      const memberId = btn.getAttribute('data-member-id');
+      const level = btn.getAttribute('data-level');
+      const remarkEl = document.querySelector(`.eval-remark[data-member-id="${memberId}"]`);
+      const remark = remarkEl ? remarkEl.value.trim() : '';
+      records.push({ memberId, criteria, level, remark });
+    });
+
+    if (!records.length) {
+      showAlert('warning', 'ยังไม่ได้เลือกผลการประเมิน', 3000);
+      return;
+    }
+
+    const payload = { records };
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        if (!res || !res.ok) {
+          showAlert('danger', res?.message || 'บันทึกไม่สำเร็จ', 4000);
+          return;
+        }
+        state.evaluationSummary = res.evaluationSummary || state.evaluationSummary;
+        state.members = res.members || state.members;
+        renderTable();
+        showAlert('success', '✓ ' + res.message, 2500);
+        closeEvaluationModal();
+      })
+      .withFailureHandler((err) => {
+        showAlert('danger', '✕ เกิดข้อผิดพลาด: ' + err.message, 4000);
+      })
+      .saveEvaluationBatch(payload, state.adminToken);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    startBootLoader();
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        if (res && res.ok) {
+          state.settings = res.settings || {};
+          state.members = res.members || [];
+          state.departments = res.departments || [];
+          state.genderSummary = res.genderSummary || {};
+          state.attendanceSummary = res.attendanceSummary || {};
+          state.evaluationSummary = res.evaluationSummary || {};
+          state.activities = res.activities || state.activities;
+          state.evalLevels = res.evalLevels || state.evalLevels;
+          state.evalCriteria = res.evalCriteria || [];
+        }
+        renderAll();
+      })
+      .getInitialData();
+
+    document.getElementById('btnToggleAdmin').addEventListener('click', handleToggleAdmin);
+    document.getElementById('searchInput').addEventListener('keyup', (e) => {
+      state.searchText = e.target.value.trim();
+      applyTableFilters();
+    });
+
+    document.getElementById('dashboardRow').addEventListener('click', (e) => {
+      const deptBtn = e.target.closest('.gender-dept-btn');
+      if (deptBtn) {
+        const g = deptBtn.getAttribute('data-gender') || '';
+        const d = deptBtn.getAttribute('data-department') || '';
+        state.filterGender = g;
+        state.filterDept = (state.filterDept === d) ? '' : d;
+        renderDashboard();
+        applyTableFilters();
+        return;
+      }
+      const card = e.target.closest('.gender-card');
+      if (card) {
+        const g = card.getAttribute('data-gender') || '';
+        if (state.filterGender === g) {
+          state.filterGender = '';
+          state.filterDept = '';
+        } else {
+          state.filterGender = g;
+          state.filterDept = '';
+        }
+        renderDashboard();
+        applyTableFilters();
+      }
+    });
+
+    document.getElementById('memberTbody').addEventListener('click', (e) => {
+      const editBtn = e.target.closest('.btn-edit');
+      const delBtn = e.target.closest('.btn-delete');
+      if (editBtn) {
+        const id = editBtn.getAttribute('data-id');
+        const m = state.members.find(x => String(x.id) === String(id));
+        if (m) openMemberModal(m);
+      } else if (delBtn) {
+        const id = delBtn.getAttribute('data-id');
+        handleDeleteMember(id);
+      }
+    });
+
+    document.getElementById('memberForm').addEventListener('submit', handleMemberFormSubmit);
+
+    document.getElementById('studentCodeInput').addEventListener('blur', lookupStudentByCode);
+    document.getElementById('studentCodeInput').addEventListener('keyup', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        lookupStudentByCode();
+      }
+    });
+
+    document.getElementById('memberModalCloseIcon').addEventListener('click', closeMemberModal);
+    document.getElementById('memberModalCancel').addEventListener('click', closeMemberModal);
+    document.getElementById('memberModal').addEventListener('click', (e) => {
+      if (e.target.id === 'memberModal') closeMemberModal();
+    });
+
+    document.getElementById('btnAddMember').addEventListener('click', () => openMemberModal(null));
+
+    document.getElementById('btnAttendance').addEventListener('click', openAttendanceModal);
+    document.getElementById('btnEvaluation').addEventListener('click', openEvaluationModal);
+
+    document.getElementById('attendanceModalCloseIcon').addEventListener('click', closeAttendanceModal);
+    document.getElementById('attendanceModalCancel').addEventListener('click', closeAttendanceModal);
+    document.getElementById('attendanceModal').addEventListener('click', (e) => {
+      if (e.target.id === 'attendanceModal') closeAttendanceModal();
+    });
+
+    document.getElementById('attendanceForm').addEventListener('submit', handleAttendanceSubmit);
+
+    document.getElementById('btnCheckAll').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.status-present').forEach(btn => {
+        btn.classList.add('active');
+        btn.style.background = '#22c55e';
+        btn.style.color = 'white';
+        btn.style.borderColor = '#16a34a';
+      });
+    });
+
+    document.getElementById('btnUncheckAll').addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.btn-status').forEach(btn => {
+        btn.classList.remove('active');
+        btn.style.background = 'white';
+        btn.style.color = '#666';
+        btn.style.borderColor = '#ccc';
+      });
+    });
+
+    document.getElementById('attendanceMemberList').addEventListener('click', (e) => {
+      const btn = e.target.closest('.btn-status');
+      if (!btn) return;
+      document.querySelectorAll(`.btn-status[data-member-id="${btn.getAttribute('data-member-id')}"]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+
+    document.getElementById('attDeptFilter').addEventListener('change', applyAttendanceFilters);
+
+    document.getElementById('evaluationModalCloseIcon').addEventListener('click', closeEvaluationModal);
+    document.getElementById('evaluationModalCancel').addEventListener('click', closeEvaluationModal);
+    document.getElementById('evaluationModal').addEventListener('click', (e) => {
+      if (e.target.id === 'evaluationModal') closeEvaluationModal();
+    });
+
+    document.getElementById('evaluationForm').addEventListener('submit', handleEvaluationSubmit);
+
+    document.getElementById('evalCriteriaSelect').addEventListener('change', (e) => {
+      state.currentEvalCriteria = e.target.value;
+      renderEvaluationMemberList();
+    });
+
+    document.getElementById('evaluationMemberList').addEventListener('click', (e) => {
+      const btn = e.target.closest('.eval-btn');
+      if (!btn) return;
+      document.querySelectorAll(`.eval-btn[data-member-id="${btn.getAttribute('data-member-id')}"]`).forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      btn.style.background = '#4f46e5';
+      btn.style.color = 'white';
+      btn.style.borderColor = '#3730a3';
+    });
+
+    document.getElementById('evalDeptFilter').addEventListener('change', applyEvalFilters);
+  });
