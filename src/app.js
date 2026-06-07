@@ -45,7 +45,8 @@ const state = {
   importRows: [],
   charts: {
     home: null,
-    profile: null
+    profile: null,
+    pubProfile: null
   }
 };
 
@@ -148,7 +149,7 @@ function renderAll() {
   renderAdmin();
   renderProfile();
   populateSelects();
-  showView(state.currentView);
+  renderDashboard();
 }
 
 function renderShell() {
@@ -156,54 +157,116 @@ function renderShell() {
   const schoolName = state.settings.schoolName || 'โรงเรียนมูลนิธิอาซิซสถาน';
 
   document.title = `DEPAZ — ${siteName}`;
-  setText('sidebarTitle', 'DEPAZ');
-  setText('mobileTitle', 'DEPAZ');
+  setText('sidebarTitle', siteName);
+  setText('mobileTitle', siteName);
   setText('heroSchoolName', schoolName);
   setText('heroTitle', siteName);
-  setText('bootSchoolName', 'DEPAZ');
-  setText('footerText', state.settings.footerText || '© ระบบสภานักเรียน DEPAZ');
+  setText('bootSchoolName', siteName);
+  setText('footerText', state.settings.footerText || `© ${siteName}`);
 
-  const adminInfo = $('sidebarAdminInfo');
-  const adminName = $('sidebarAdminName');
-  const adminLabel = $('sidebarAdminLabel');
-  const memberBadge = $('mobileUserBadge');
-  const mobileAdminLabel = $('mobileAdminTabLabel');
+  // Theme Colors
+  const primaryColor = state.settings.colorPrimary || '#D81B60';
+  const secondaryColor = state.settings.colorSecondary || '#7C3AED';
+  document.documentElement.style.setProperty('--primary', primaryColor);
+  document.documentElement.style.setProperty('--secondary', secondaryColor);
+  document.documentElement.style.setProperty('--primary-light', primaryColor + '12'); // Approx 7% opacity
+  document.documentElement.style.setProperty('--primary-dark', primaryColor);
 
-  adminInfo?.classList.toggle('hidden', !state.admin);
-  setText(adminName, state.admin?.username || '');
-  setText(adminLabel, state.admin ? 'ออกจากแอดมิน' : 'เข้าสู่ระบบแอดมิน');
-  setText(mobileAdminLabel, state.admin ? 'แอดมิน' : 'เข้าสู่ระบบ');
-
-  if (memberBadge) {
-    memberBadge.classList.toggle('hidden', !state.member);
-    memberBadge.textContent = state.member?.fullname || '';
+  // Logo Url Display
+  const logoUrl = state.settings.logoUrl;
+  const sidebarBrandIcon = $('sidebarBrandIcon');
+  const mobileBrandIcon = $('mobileBrandIcon');
+  if (logoUrl) {
+    if (sidebarBrandIcon) sidebarBrandIcon.innerHTML = `<img src="${escapeAttr(logoUrl)}" class="w-8 h-8 rounded-lg object-cover" alt="">`;
+    if (mobileBrandIcon) {
+      mobileBrandIcon.innerHTML = `<img src="${escapeAttr(logoUrl)}" class="w-7 h-7 rounded-lg object-cover" alt="">`;
+      mobileBrandIcon.className = 'w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center shadow-sm';
+    }
+  } else {
+    if (sidebarBrandIcon) sidebarBrandIcon.innerHTML = `<i class="fa-solid fa-users-gear"></i>`;
+    if (mobileBrandIcon) {
+      mobileBrandIcon.innerHTML = `<i class="fa-solid fa-users-gear text-white text-xs"></i>`;
+      mobileBrandIcon.className = 'w-7 h-7 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center shadow-sm';
+    }
   }
 
-  ['btnAddMember', 'memberImportBar', 'btnAddEvent'].forEach((id) => {
-    $(id)?.classList.toggle('hidden', !state.admin);
-  });
+  // Admin UI updates
+  // Desktop
+  const sidebarAdminInfo = $('sidebarAdminInfo');
+  const sidebarAdminName = $('sidebarAdminName');
+  const sidebarAdminLabel = $('sidebarAdminLabel');
+  
+  sidebarAdminInfo?.classList.toggle('hidden', !state.admin);
+  setText(sidebarAdminName, state.admin?.username || '');
+  setText(sidebarAdminLabel, state.admin ? 'ออกจากแอดมิน' : 'เข้าสู่ระบบแอดมิน');
+
+  // Mobile Header Admin Badge
+  const mobileAdminBadge = $('mobileAdminBadge');
+  mobileAdminBadge?.classList.toggle('hidden', !state.admin);
+
+  // Update tabs visibility
+  const sidebarAdminPanelTab = $('sidebarAdminPanelTab');
+  sidebarAdminPanelTab?.classList.toggle('hidden', !state.admin);
+  
+  const mobileAdminTab = $('mobileAdminTab');
+  mobileAdminTab?.classList.toggle('hidden', !state.admin);
+
+  // Member Badge UI
+  const mobileUserBadge = $('mobileUserBadge');
+  if (mobileUserBadge) {
+    mobileUserBadge.classList.toggle('hidden', !state.member);
+    mobileUserBadge.textContent = state.member?.fullname || '';
+  }
+
+  // Admin actions toggles (members page only – home buttons are always visible)
+  const membersAdminActions = $('membersAdminActions');
+  membersAdminActions?.classList.toggle('hidden', !state.admin);
+
+  const memberImportBar = $('memberImportBar');
+  memberImportBar?.classList.toggle('hidden', !state.admin);
 }
 
 function showView(view) {
-  const allowed = ['home', 'events', 'members', 'profile', 'admin'];
-  const next = allowed.includes(view) ? view : 'home';
-  state.currentView = next;
-
-  $$('.view-section').forEach((section) => section.classList.add('hidden'));
-  $(`view-${next}`)?.classList.remove('hidden');
-
-  $$('.snav-btn, .mnav-btn').forEach((button) => {
-    button.classList.toggle('active', button.dataset.view === next);
+  // Hide all main view sections
+  const viewIds = ['view-home', 'view-events', 'view-members', 'view-profile', 'view-admin'];
+  viewIds.forEach((id) => {
+    $(id)?.classList.add('hidden');
   });
 
-  if (next === 'admin' && !state.admin) {
-    showView('home');
-    void adminLogin();
-    return;
+  // Handle specific view cases
+  if (view === 'profile') {
+    if (!state.member) {
+      $('profileGuest')?.classList.remove('hidden');
+      $('profileDashboard')?.classList.add('hidden');
+    } else {
+      $('profileGuest')?.classList.add('hidden');
+      $('profileDashboard')?.classList.remove('hidden');
+      renderProfile();
+    }
+    $('view-profile')?.classList.remove('hidden');
+  } else if (view === 'admin') {
+    if (!state.admin) {
+      void adminLogin();
+      return;
+    }
+    $('view-admin')?.classList.remove('hidden');
+  } else {
+    $(`view-${view}`)?.classList.remove('hidden');
   }
 
-  if (next === 'profile') renderProfile();
-  if (next === 'admin') renderAdmin();
+  // Update active states on snav-btn and mnav-btn
+  $$('[data-view]').forEach((btn) => {
+    if (btn.dataset.view === view) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // Scroll to top of the view
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  state.currentView = view;
 }
 
 function renderHome() {
@@ -287,7 +350,7 @@ function renderMembers() {
     tbody.innerHTML = rows.length ? rows.map((member, index) => {
       const att = memberAttendance(member.id);
       return `
-        <tr class="hover:bg-pink-50/40 transition">
+        <tr class="hover:bg-pink-50/40 transition cursor-pointer member-row" data-id="${member.id}">
           <td class="px-4 py-3 text-center text-gray-400 font-bold">${index + 1}</td>
           <td class="px-4 py-3 font-extrabold text-gray-700">${escapeHtml(member.student_code || '')}</td>
           <td class="px-4 py-3">
@@ -314,7 +377,7 @@ function renderMembers() {
     cards.innerHTML = rows.length ? rows.map((member) => {
       const att = memberAttendance(member.id);
       return `
-        <div class="member-card">
+        <div class="member-card cursor-pointer" data-id="${member.id}">
           ${avatar(member, 'member-avatar')}
           <div class="min-w-0 flex-1">
             <p class="font-extrabold text-sm text-gray-800 truncate">${escapeHtml(member.fullname || '')}</p>
@@ -330,7 +393,7 @@ function renderMembers() {
     }).join('') : emptyState('ยังไม่มีรายชื่อสมาชิก');
   }
 
-  populateMemberFilters();
+  renderMemberFilters();
 }
 
 function filteredMembers() {
@@ -338,7 +401,13 @@ function filteredMembers() {
   return state.members.filter((member) => {
     const text = `${member.student_code || ''} ${member.fullname || ''} ${member.class_name || ''} ${member.department_name || ''}`.toLowerCase();
     if (search && !text.includes(search)) return false;
-    if (state.memberDept && String(member.department_id) !== String(state.memberDept)) return false;
+    
+    if (state.memberDept) {
+      const isMatchId = String(member.department_id) === String(state.memberDept);
+      const isMatchName = member.department_name && member.department_name.toLowerCase() === String(state.memberDept).toLowerCase();
+      if (!isMatchId && !isMatchName) return false;
+    }
+    
     if (state.memberGender && getGender(member.fullname) !== state.memberGender) return false;
     return true;
   });
@@ -740,6 +809,41 @@ function bindEvents() {
     const openEventButton = event.target.closest('.event-open');
     if (openEventButton) openEventDetail(openEventButton.dataset.id);
 
+    // Skip public profile modal if they clicked on standard action buttons
+    const isAdminAction = event.target.closest('.member-edit') || 
+                          event.target.closest('.member-delete') || 
+                          event.target.closest('.cert-open');
+
+    if (!isAdminAction) {
+      const memberRow = event.target.closest('.member-row');
+      if (memberRow) {
+        openPublicProfile(memberRow.dataset.id);
+        return;
+      }
+
+      const memberCard = event.target.closest('.member-card');
+      if (memberCard) {
+        openPublicProfile(memberCard.dataset.id);
+        return;
+      }
+    }
+
+    // Quick action buttons on home page (visible to all, prompt admin login if needed)
+    const quickAttBtn = event.target.closest('.quick-attendance-btn');
+    if (quickAttBtn) { void openAttendanceWithLogin(); return; }
+
+    const quickEvalBtn = event.target.closest('.quick-eval-btn');
+    if (quickEvalBtn) { void openEvaluationWithLogin(); return; }
+
+    const deptFilterBtn = event.target.closest('.member-dept-filter-btn');
+    if (deptFilterBtn) {
+      const d = deptFilterBtn.getAttribute('data-dept');
+      state.memberDept = state.memberDept === d ? '' : d;
+      renderDashboard();
+      renderMembers();
+      return;
+    }
+
     const editMember = event.target.closest('.member-edit');
     if (editMember) openMemberModal(editMember.dataset.id);
 
@@ -781,24 +885,77 @@ function bindEvents() {
   });
 
   $('sidebarAdminBtn')?.addEventListener('click', () => state.admin ? adminLogout() : adminLogin());
-  $('mobileAdminTab')?.addEventListener('click', (event) => {
-    if (!state.admin) {
-      event.preventDefault();
-      void adminLogin();
+  $('dashboardRow')?.addEventListener('click', (event) => {
+    const deptBtn = event.target.closest('.gender-dept-btn');
+    if (deptBtn) {
+      event.stopPropagation();
+      const g = deptBtn.getAttribute('data-gender');
+      const d = deptBtn.getAttribute('data-department');
+      state.memberGender = g;
+      state.memberDept = state.memberDept === d ? '' : d;
+      renderDashboard();
+      renderMembers();
+      return;
+    }
+    const card = event.target.closest('.gender-card');
+    if (card) {
+      const g = card.getAttribute('data-gender');
+      if (state.memberGender === g) {
+        state.memberGender = '';
+        state.memberDept = '';
+      } else {
+        state.memberGender = g;
+        state.memberDept = '';
+      }
+      renderDashboard();
+      renderMembers();
     }
   });
-  $('mobileMemberBtn')?.addEventListener('click', () => showView('profile'));
+
+  $('profileModalClose')?.addEventListener('click', () => hideModal('profileModal'));
+  $('toggleEventsPanel')?.addEventListener('click', () => togglePanel('eventsPanel', 'eventsChevron'));
+  $('btnClearFilters')?.addEventListener('click', () => {
+    state.memberGender = '';
+    state.memberDept = '';
+    renderDashboard();
+    renderMembers();
+  });
+
+  // Bind quick admin actions
+  $('quickAddMember')?.addEventListener('click', () => openMemberModal());
+  $('quickAttendance')?.addEventListener('click', openAttendanceModal);
+  $('quickEvaluation')?.addEventListener('click', openEvaluationModal);
+  $('quickCertAdmin')?.addEventListener('click', openAdminCertModal);
+  $('quickAdminPanel')?.addEventListener('click', () => {
+    const adminPanel = $('view-admin');
+    if (adminPanel) {
+      adminPanel.classList.toggle('hidden');
+      if (!adminPanel.classList.contains('hidden')) {
+        adminPanel.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  });
 
   $('memberSearch')?.addEventListener('input', (event) => {
     state.memberSearch = event.target.value.trim();
     renderMembers();
   });
-  $('memberDeptFilter')?.addEventListener('change', (event) => {
-    state.memberDept = event.target.value;
+  $('memberFilterGenderAll')?.addEventListener('click', () => {
+    state.memberGender = '';
+    state.memberDept = '';
+    renderDashboard();
     renderMembers();
   });
-  $('memberGenderFilter')?.addEventListener('change', (event) => {
-    state.memberGender = event.target.value;
+  $('memberFilterGenderMale')?.addEventListener('click', () => {
+    state.memberGender = 'ชาย';
+    state.memberDept = '';
+    renderDashboard();
+    renderMembers();
+  });
+  $('memberFilterGenderFemale')?.addEventListener('click', () => {
+    state.memberGender = 'หญิง';
+    state.memberDept = '';
+    renderDashboard();
     renderMembers();
   });
 
@@ -828,6 +985,16 @@ function bindEvents() {
   $('memberForm')?.addEventListener('submit', submitMember);
   $('btnLookupStudent')?.addEventListener('click', lookupStudent);
   $('studentCodeInput')?.addEventListener('blur', lookupStudent);
+
+  $('publicProfileModalClose')?.addEventListener('click', () => hideModal('publicProfileModal'));
+  $('publicProfileModal')?.addEventListener('click', (event) => event.target.id === 'publicProfileModal' && hideModal('publicProfileModal'));
+
+  $('settingColorPrimary')?.addEventListener('input', (event) => {
+    setText('settingColorPrimaryHex', event.target.value);
+  });
+  $('settingColorSecondary')?.addEventListener('input', (event) => {
+    setText('settingColorSecondaryHex', event.target.value);
+  });
 
   $('eventModalClose')?.addEventListener('click', closeEventModal);
   $('eventModalCancel')?.addEventListener('click', closeEventModal);
@@ -1166,6 +1333,46 @@ function closeEvaluationModal() {
   hideModal('evaluationModal');
 }
 
+// ── Quick-action helpers (login-prompted) ──────────────────────────────────
+async function openAttendanceWithLogin() {
+  if (!state.admin) {
+    await adminLoginOnly();
+    if (!state.admin) return; // User cancelled
+  }
+  openAttendanceModal();
+}
+
+async function openEvaluationWithLogin() {
+  if (!state.admin) {
+    await adminLoginOnly();
+    if (!state.admin) return; // User cancelled
+  }
+  openEvaluationModal();
+}
+
+// adminLoginOnly: same as adminLogin but doesn't navigate to admin view
+async function adminLoginOnly() {
+  const result = await Swal.fire({
+    title: 'เข้าสู่ระบบเพื่อใช้งาน',
+    html: '<input id="adminUser2" class="swal2-input" placeholder="Username"><input id="adminPass2" type="password" class="swal2-input" placeholder="Password">',
+    showCancelButton: true,
+    confirmButtonText: 'เข้าสู่ระบบ',
+    cancelButtonText: 'ยกเลิก',
+    preConfirm: () => ({
+      username: document.getElementById('adminUser2').value.trim(),
+      password: document.getElementById('adminPass2').value
+    })
+  });
+  if (!result.value) return;
+  const { username, password } = result.value;
+  const { data, error } = await supabase.from('council_admin').select('*').eq('username', username).eq('password', password).maybeSingle();
+  if (error || !data) { toast('danger', 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'); return; }
+  state.admin = { id: data.id, username: data.username };
+  localStorage.setItem('depaz_admin_session', JSON.stringify(state.admin));
+  toast('success', 'เข้าสู่ระบบแล้ว');
+  renderShell();
+}
+
 function renderEvaluationMemberList() {
   const dept = $('evalDeptFilter')?.value || '';
   const members = state.members.filter((member) => !dept || String(member.department_id) === String(dept));
@@ -1406,7 +1613,9 @@ async function saveSystemSettings() {
     ['siteName', $('settingSiteName')?.value.trim()],
     ['footerText', $('settingFooter')?.value.trim()],
     ['logoUrl', $('settingLogoUrl')?.value.trim()],
-    ['schoolName', $('settingSchoolName')?.value.trim()]
+    ['schoolName', $('settingSchoolName')?.value.trim()],
+    ['colorPrimary', $('settingColorPrimary')?.value],
+    ['colorSecondary', $('settingColorSecondary')?.value]
   ].map(([key, value]) => ({ key, value: value || '' }));
   const { error } = await supabase.from('council_settings').upsert(rows, { onConflict: 'key' });
   if (error) return toast('danger', error.message);
@@ -1558,7 +1767,7 @@ function writeWorkbook(rows, filename, sheetName) {
 }
 
 function populateSelects() {
-  populateMemberFilters();
+  renderMemberFilters();
   fillSelect('departmentInput', state.departments, 'id', 'name_th', '- เลือกฝ่าย -');
   fillSelect('evDept', state.departments, 'id', 'name_th', 'ไม่ระบุ');
   fillSelect('attDeptFilter', state.departments, 'id', 'name_th', 'ทุกฝ่าย');
@@ -1568,12 +1777,68 @@ function populateSelects() {
   if (evalSelect) evalSelect.innerHTML = state.evalCriteria.map((name) => `<option value="${escapeAttr(name)}">${escapeHtml(name)}</option>`).join('');
 }
 
-function populateMemberFilters() {
-  const select = $('memberDeptFilter');
-  if (!select) return;
-  const current = select.value || state.memberDept;
-  fillSelect('memberDeptFilter', state.departments, 'id', 'name_th', 'ทุกฝ่าย');
-  select.value = current;
+function renderMemberFilters() {
+  const gender = state.memberGender || '';
+  const btnAll = $('memberFilterGenderAll');
+  const btnMale = $('memberFilterGenderMale');
+  const btnFemale = $('memberFilterGenderFemale');
+
+  if (btnAll) {
+    btnAll.className = `px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+      gender === '' 
+        ? 'bg-pink-50 border-pink-100 text-pink-600 font-extrabold shadow-sm' 
+        : 'bg-white border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600'
+    }`;
+  }
+  if (btnMale) {
+    btnMale.className = `px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+      gender === 'ชาย' 
+        ? 'bg-pink-50 border-pink-100 text-pink-600 font-extrabold shadow-sm' 
+        : 'bg-white border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600'
+    }`;
+  }
+  if (btnFemale) {
+    btnFemale.className = `px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
+      gender === 'หญิง' 
+        ? 'bg-pink-50 border-pink-100 text-pink-600 font-extrabold shadow-sm' 
+        : 'bg-white border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600'
+    }`;
+  }
+
+  const deptsContainer = $('memberFilterDeptsContainer');
+  const deptsWrapper = $('memberFilterDepts');
+
+  if (gender === 'ชาย' || gender === 'หญิง') {
+    deptsContainer?.classList.remove('hidden');
+    if (deptsWrapper) {
+      const depts = getDepartmentsByGender(gender);
+      deptsWrapper.innerHTML = Object.keys(depts).map((deptName) => {
+        const dept = state.departments.find(d => d.name_th === deptName);
+        const deptVal = dept ? String(dept.id) : deptName;
+        const isDeptActive = String(state.memberDept) === String(deptVal);
+        
+        return `
+          <button type="button" 
+            class="inline-flex items-center justify-center rounded-full border text-[10px] px-2.5 py-1.5 transition-all ${
+              isDeptActive 
+                ? 'bg-pink-600 border-pink-600 text-white font-bold' 
+                : 'bg-white border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600'
+            } member-dept-filter-btn" 
+            data-dept="${deptVal}">
+            ${escapeHtml(deptName)} (${depts[deptName]})
+          </button>
+        `;
+      }).join('');
+    }
+  } else {
+    deptsContainer?.classList.add('hidden');
+    if (deptsWrapper) deptsWrapper.innerHTML = '';
+  }
+}
+
+function getDepartmentsByGender(gender) {
+  const summary = getGenderSummary();
+  return summary[gender]?.departments || {};
 }
 
 function fillSettingsForm() {
@@ -1582,6 +1847,17 @@ function fillSettingsForm() {
   setValue('settingLogoUrl', state.settings.logoUrl || '');
   setValue('settingSchoolName', state.settings.schoolName || 'โรงเรียนมูลนิธิอาซิซสถาน');
   setValue('settingTelegramChatId', state.settings.telegramChatId || '');
+
+  const primaryColor = state.settings.colorPrimary || '#D81B60';
+  const secondaryColor = state.settings.colorSecondary || '#7C3AED';
+  
+  const cp = $('settingColorPrimary');
+  if (cp) cp.value = primaryColor;
+  setText('settingColorPrimaryHex', primaryColor);
+  
+  const cs = $('settingColorSecondary');
+  if (cs) cs.value = secondaryColor;
+  setText('settingColorSecondaryHex', secondaryColor);
 }
 
 function renderParticipantPicker(eventId) {
@@ -1757,4 +2033,194 @@ function escapeHtml(value = '') {
 
 function escapeAttr(value = '') {
   return escapeHtml(value);
+}
+
+function renderDashboard() {
+  const container = $('dashboardRow');
+  if (!container) return;
+  
+  const summary = getGenderSummary();
+  container.innerHTML = Object.keys(summary).map(g => {
+    const info = summary[g];
+    const total = info.total;
+    const isActive = state.memberGender === g;
+    const icon = g === 'ชาย' ? '👦' : '👧';
+    const title = g === 'ชาย' ? 'คณะผู้แทนนักเรียนชาย' : 'คณะผู้แทนนักเรียนหญิง';
+    
+    const deptButtons = Object.keys(info.departments).map(deptName => {
+      const cnt = info.departments[deptName];
+      const isDeptActive = state.memberDept === deptName && state.memberGender === g;
+      return `
+        <button type="button" 
+          class="inline-flex items-center justify-center rounded-full border text-[10px] px-2.5 py-1 transition-all ${
+            isDeptActive 
+              ? 'bg-pink-600 border-pink-600 text-white font-bold' 
+              : 'bg-white border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600'
+          } gender-dept-btn" 
+          data-gender="${g}" 
+          data-department="${deptName}">
+          ${deptName} (${cnt})
+        </button>
+      `;
+    }).join('');
+    
+    return `
+      <div class="stat-card cursor-pointer transition-all duration-300 relative overflow-hidden border border-gray-100 ${
+        isActive 
+          ? 'ring-2 ring-pink-500 shadow-md shadow-pink-100' 
+          : ''
+      } gender-card" data-gender="${g}">
+        <div class="relative z-10">
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <div>
+              <h3 class="font-extrabold text-sm text-gray-800">${title}</h3>
+              <p class="text-xs text-gray-500 font-semibold">รวมทั้งหมด ${total} คน</p>
+            </div>
+            <span class="text-3xl filter drop-shadow-sm">${icon}</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-gray-50">
+            ${deptButtons}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  const clearBtn = $('btnClearFilters');
+  if (clearBtn) {
+    if (state.memberGender || state.memberDept) {
+      clearBtn.classList.remove('hidden');
+    } else {
+      clearBtn.classList.add('hidden');
+    }
+  }
+}
+
+function getGenderSummary() {
+  const summary = {
+    'ชาย': { total: 0, departments: {} },
+    'หญิง': { total: 0, departments: {} }
+  };
+  
+  state.members.forEach(member => {
+    const gender = getGender(member.fullname);
+    if (gender === 'ชาย' || gender === 'หญิง') {
+      summary[gender].total++;
+      const deptName = member.department_name || 'ไม่ระบุฝ่าย';
+      summary[gender].departments[deptName] = (summary[gender].departments[deptName] || 0) + 1;
+    }
+  });
+  
+  return summary;
+}
+
+// ────────────────────────────────────────────────────────────────
+// PUBLIC MEMBER PROFILE DIALOG/MODAL ACTIONS
+// ────────────────────────────────────────────────────────────────
+function openPublicProfile(memberId) {
+  const member = state.members.find(m => String(m.id) === String(memberId));
+  if (!member) return;
+
+  setText('pubProfileDept', member.department_name || 'ฝ่ายสภา');
+  setText('pubProfileName', member.fullname || '');
+  setText('pubProfileClass', member.class_name || '');
+  setText('pubProfileCode', member.student_code || '');
+  setText('pubProfileStatus', member.status === 'inactive' ? 'พักสถานะ' : 'สมาชิกสภา');
+
+  const photo = $('pubProfilePhoto');
+  const initial = $('pubProfileInitial');
+  if (photo && initial) {
+    photo.classList.toggle('hidden', !member.image_url);
+    initial.classList.toggle('hidden', !!member.image_url);
+    photo.src = member.image_url || '';
+    initial.textContent = initials(member.fullname);
+  }
+
+  const att = memberAttendance(member.id);
+  const participantEvents = eventsForMember(member.id);
+  const evaluated = state.evaluations.filter((row) => String(row.member_id) === String(member.id)).length;
+
+  const statsContainer = $('pubProfileStats');
+  if (statsContainer) {
+    statsContainer.innerHTML = [
+      ['เข้าเฉลี่ย', att.label],
+      ['กิจกรรม', participantEvents.length],
+      ['ประเมิน', evaluated]
+    ].map(([label, value]) => `
+      <div class="stat-card">
+        <div class="stat-value">${value}</div>
+        <div class="stat-label">${label}</div>
+      </div>
+    `).join('');
+  }
+
+  // Render Chart
+  renderPublicProfileChart(att.percent || 0);
+
+  // Render History
+  const historyContainer = $('pubProfileHistory');
+  if (historyContainer) {
+    const rows = state.attendance
+      .filter((row) => String(row.member_id) === String(member.id))
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    historyContainer.innerHTML = rows.length ? rows.map((row) => {
+      const activity = state.activities.find((a) => String(a.id) === String(row.activity_id));
+      const present = row.status === 'present';
+      return `
+        <div class="px-3 py-2 flex items-center justify-between gap-2">
+          <div>
+            <p class="text-xs font-extrabold text-gray-800">${escapeHtml(activity?.activity_name || 'กิจกรรม')}</p>
+            <p class="text-[9px] text-gray-400 font-bold">${formatDate(row.date)} ${row.remark ? `· ${escapeHtml(row.remark)}` : ''}</p>
+          </div>
+          <span class="text-[9px] font-extrabold ${present ? 'text-emerald-600' : 'text-rose-600'}">${present ? 'เข้าร่วม' : 'ไม่เข้าร่วม'}</span>
+        </div>
+      `;
+    }).join('') : emptyState('ยังไม่มีประวัติการเข้าร่วม');
+  }
+
+  // Render Certs
+  renderPublicProfileCerts(member.id);
+
+  showModal('publicProfileModal');
+}
+
+function renderPublicProfileChart(percent) {
+  const container = $('pubProfileChart');
+  if (!container || typeof ApexCharts === 'undefined') return;
+  state.charts.pubProfile?.destroy();
+  state.charts.pubProfile = new ApexCharts(container, {
+    series: [Math.round(percent)],
+    chart: { type: 'radialBar', height: 180, toolbar: { show: false } },
+    colors: [state.settings.colorPrimary || '#D81B60'],
+    plotOptions: { radialBar: { hollow: { size: '60%' }, dataLabels: { name: { show: false }, value: { formatter: (v) => `${v}%` } } } }
+  });
+  state.charts.pubProfile.render();
+}
+
+function renderPublicProfileCerts(memberId) {
+  const container = $('pubProfileCerts');
+  const empty = $('pubProfileCertsEmpty');
+  if (!container) return;
+  const myCerts = state.certificates.filter((c) => String(c.member_id) === String(memberId));
+  if (!myCerts.length) {
+    container.innerHTML = '';
+    empty?.classList.remove('hidden');
+    return;
+  }
+  empty?.classList.add('hidden');
+  container.innerHTML = myCerts.map((c) => {
+    const campaign = state.campaigns.find((x) => String(x.id) === String(c.campaign_id));
+    if (!campaign) return '';
+    return `
+      <button class="cert-gallery-card cert-open" data-member-id="${memberId}" data-campaign-id="${campaign.id}">
+        <div class="cert-gallery-thumb" style="${campaign.template_url ? `background-image:url('${escapeAttr(campaign.template_url)}')` : ''}">
+          <i class="fa-solid fa-award text-2xl text-pink-300 ${campaign.template_url ? 'hidden' : ''}"></i>
+        </div>
+        <div class="cert-gallery-info">
+          <p class="text-xs font-bold text-gray-800 truncate">${escapeHtml(campaign.name)}</p>
+          <p class="text-[10px] text-gray-400">${campaign.type === 'activity' ? 'การเข้าร่วมกิจกรรม' : 'การปฏิบัติหน้าที่'} · ${formatDate(c.issued_at)}</p>
+        </div>
+      </button>
+    `;
+  }).join('');
 }

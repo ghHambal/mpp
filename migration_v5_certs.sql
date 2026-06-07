@@ -15,7 +15,9 @@ VALUES
   ('การเขียนใบโครงการ',       'activity', 'เกียรติบัตรการเขียนใบโครงการ')
 ON CONFLICT DO NOTHING;
 
--- ── 3. Insert certificates (skip unknown member_ids) ───────────────
+-- ── 3. Insert certificates ────────────────────────────────────────
+-- Column layout: (legacy_uuid TEXT, member_id BIGINT, campaign_name TEXT, file_url TEXT, issued_at TEXT)
+-- council_members.id is INTEGER — column 2 (member_id) is used for the FK
 INSERT INTO council_certificates (member_id, campaign_id, file_url, issued_at)
 SELECT v.member_id, c.id, v.file_url, v.issued_at::timestamptz
 FROM (VALUES
@@ -218,7 +220,7 @@ FROM (VALUES
   ('b0b0141e-6f0a-4a67-b4d4-3b560cb78382',  57, 'การเขียนใบโครงการ', 'https://drive.google.com/file/d/1D7Pfct2forOXvcJbQehazZlhT8w5dYCE/view?usp=drivesdk', '2026-01-22 22:50:42'),
   ('c149a9d2-7350-4b14-8da0-fb2e7f623f91',  86, 'การเขียนใบโครงการ', 'https://drive.google.com/file/d/1W8HS-W_dGwtTKRzJKpwJqwah3j92Bct8/view?usp=drivesdk', '2026-01-22 22:51:07')
   -- หมายเหตุ: member_id 125 และ 127 ข้ามเนื่องจากไม่มีในระบบ
-) AS v(uuid, member_id, campaign_name, file_url, issued_at)
+) AS v(legacy_uuid, member_id, campaign_name, file_url, issued_at)
 JOIN council_cert_campaigns c ON c.name = v.campaign_name
 WHERE EXISTS (SELECT 1 FROM council_members m WHERE m.id = v.member_id)
 ON CONFLICT (member_id, campaign_id) DO UPDATE SET

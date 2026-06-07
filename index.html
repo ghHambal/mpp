@@ -54,9 +54,9 @@
 <div class="app-wrapper">
 
   <!-- ── DESKTOP SIDEBAR ─────────────────────────── -->
-  <aside id="sidebar">
+  <aside id="sidebar" class="no-print">
     <div class="sidebar-brand">
-      <div class="brand-icon"><i class="fa-solid fa-users-gear"></i></div>
+      <div class="brand-icon" id="sidebarBrandIcon"><i class="fa-solid fa-users-gear"></i></div>
       <div>
         <div id="sidebarTitle" class="brand-name">DEPAZ</div>
         <div class="brand-sub">สภานักเรียน</div>
@@ -65,7 +65,7 @@
 
     <nav class="sidebar-nav">
       <button class="snav-btn active" data-view="home">
-        <i class="fa-solid fa-house-chimney"></i><span>หน้าหลัก</span>
+        <i class="fa-solid fa-house-chimney"></i><span>หน้าหลัก (แดชบอร์ด)</span>
       </button>
       <button class="snav-btn" data-view="events">
         <i class="fa-solid fa-calendar-days"></i><span>กิจกรรมสภา</span>
@@ -75,6 +75,9 @@
       </button>
       <button class="snav-btn" data-view="profile">
         <i class="fa-solid fa-circle-user"></i><span>พื้นที่ของฉัน</span>
+      </button>
+      <button class="snav-btn hidden" id="sidebarAdminPanelTab" data-view="admin">
+        <i class="fa-solid fa-sliders"></i><span>ตั้งค่าแอดมิน</span>
       </button>
     </nav>
 
@@ -89,19 +92,22 @@
     </div>
   </aside>
 
-  <!-- ── MAIN CONTENT ────────────────────────────── -->
+  <!-- ── MAIN CONTENT AREA ───────────────────────── -->
   <div class="main-area">
 
     <!-- Mobile Top Header -->
-    <header id="mobileHeader" class="mobile-header md:hidden">
+    <header id="mobileHeader" class="mobile-header md:hidden no-print">
       <div class="flex items-center gap-2.5">
-        <div class="w-7 h-7 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center shadow-sm">
+        <div class="w-7 h-7 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center shadow-sm" id="mobileBrandIcon">
           <i class="fa-solid fa-users-gear text-white text-xs"></i>
         </div>
         <span id="mobileTitle" class="text-sm font-extrabold text-gray-800">DEPAZ</span>
       </div>
       <div class="flex items-center gap-2">
-        <span id="mobileUserBadge" class="hidden text-[10px] font-bold text-rose-600 bg-rose-50 px-2.5 py-1 rounded-full"></span>
+        <!-- Admin Info Badge -->
+        <span id="mobileAdminBadge" class="hidden text-[9px] font-bold text-rose-700 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-full"><i class="fa-solid fa-user-shield mr-1"></i>แอดมิน</span>
+        <!-- Member Badge -->
+        <span id="mobileUserBadge" class="hidden text-[9px] font-bold text-pink-700 bg-pink-50 border border-pink-100 px-2.5 py-0.5 rounded-full"></span>
         <button id="mobileMemberBtn" class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-pink-50 hover:text-pink-600 transition">
           <i class="fa-solid fa-circle-user text-sm"></i>
         </button>
@@ -111,58 +117,74 @@
     <!-- ── SCROLLABLE CONTENT ── -->
     <main id="mainContent" class="main-content">
 
-      <!-- ════════ VIEW: HOME ════════ -->
-      <section id="view-home" class="view-section">
+      <!-- Alert container -->
+      <div id="alertContainer" class="fixed top-4 right-4 z-[999] space-y-2 w-80 pointer-events-none no-print"></div>
+
+      <!-- ════════ VIEW: HOME (DASHBOARD) ════════ -->
+      <section id="view-home" class="view-section space-y-6">
         <!-- Hero Banner -->
         <div class="hero-banner">
           <div class="hero-glow"></div>
-          <div class="relative z-10">
-            <p class="text-[10px] font-extrabold text-pink-300 tracking-widest uppercase mb-1" id="heroSchoolName">โรงเรียนมูลนิธิอาซิซสถาน</p>
-            <h1 id="heroTitle" class="text-2xl sm:text-3xl font-black text-white mb-2 leading-tight">ระบบจัดการสภานักเรียน</h1>
-            <p class="text-sm text-pink-100 font-semibold mb-6">รวมข้อมูลกิจกรรม · การปฏิบัติหน้าที่ · สมาชิกสภานักเรียน</p>
-            <div class="flex flex-wrap gap-2">
-              <button class="nav-trigger-btn" data-view="events">
-                <i class="fa-solid fa-calendar-days mr-1.5"></i>ดูกิจกรรมทั้งหมด
+          <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p class="text-[10px] font-extrabold text-pink-300 tracking-widest uppercase mb-1" id="heroSchoolName">โรงเรียนมูลนิธิอาซิซสถาน</p>
+              <h1 id="heroTitle" class="text-2xl sm:text-3xl font-black text-white leading-tight">ระบบจัดการสภานักเรียน</h1>
+              <p class="text-xs text-pink-100 font-semibold">รวมข้อมูลกิจกรรม · การปฏิบัติหน้าที่ · สมาชิกสภานักเรียน</p>
+            </div>
+            
+            <!-- Quick Actions (Always visible – will prompt admin login if needed) -->
+            <div id="homeQuickActions" class="flex flex-wrap gap-2">
+              <button id="homeAttendanceBtn" class="quick-attendance-btn action-btn-primary bg-amber-500 hover:bg-amber-600 shadow-md text-xs font-bold py-2 px-4 rounded-full">
+                <i class="fa-solid fa-clipboard-user mr-1.5"></i>เช็คชื่อกิจกรรม
               </button>
-              <button class="nav-trigger-btn bg-white/10 border border-white/20" data-view="members">
-                <i class="fa-solid fa-users mr-1.5"></i>รายชื่อสมาชิก
+              <button id="homeEvalBtn" class="quick-eval-btn action-btn-primary bg-indigo-600 hover:bg-indigo-700 shadow-md text-xs font-bold py-2 px-4 rounded-full">
+                <i class="fa-solid fa-star mr-1.5"></i>ประเมินการทำงาน
               </button>
             </div>
           </div>
         </div>
 
+
         <!-- Stats Row -->
-        <div id="homeStats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"></div>
+        <div id="homeStats" class="grid grid-cols-2 sm:grid-cols-4 gap-4"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- Interactive Gender Summary Cards (Filters the table) -->
+          <div class="lg:col-span-2 space-y-3">
+            <h2 class="text-[10px] font-extrabold uppercase tracking-wider text-gray-400 flex items-center gap-1.5"><i class="fa-solid fa-filter text-pink-500"></i>คลิกคัดกรองตามฝ่ายงาน</h2>
+            <div id="dashboardRow" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+          </div>
+
+          <!-- Department Attendance Rate Chart -->
+          <div class="section-card">
+            <div class="section-card-header">
+              <h2 class="section-title"><i class="fa-solid fa-chart-bar text-[var(--primary)] mr-2"></i>อัตราเข้าร่วมตามฝ่าย</h2>
+            </div>
+            <div id="homeChart" class="px-2 py-1"></div>
+          </div>
+        </div>
 
         <!-- Recent Events -->
         <div class="section-card">
           <div class="section-card-header">
-            <h2 class="section-title"><i class="fa-solid fa-bolt text-amber-500 mr-2"></i>กิจกรรมล่าสุด</h2>
-            <button class="text-[10px] font-bold text-[var(--primary)] hover:underline nav-trigger-btn-plain" data-view="events">ดูทั้งหมด →</button>
+            <h2 class="section-title"><i class="fa-solid fa-bolt text-amber-500 mr-2"></i>กิจกรรมและภาระงานล่าสุด</h2>
+            <button class="text-[10px] font-bold text-[var(--primary)] hover:underline nav-trigger-btn-plain" data-view="events">ดูกิจกรรมทั้งหมด →</button>
           </div>
           <div id="recentEvents" class="divide-y divide-gray-100"></div>
-        </div>
-
-        <!-- Dept Chart -->
-        <div class="section-card">
-          <div class="section-card-header">
-            <h2 class="section-title"><i class="fa-solid fa-chart-bar text-[var(--primary)] mr-2"></i>อัตราเข้าร่วมกิจกรรมตามฝ่าย</h2>
-          </div>
-          <div id="homeChart" class="px-2 py-1"></div>
         </div>
       </section>
 
       <!-- ════════ VIEW: EVENTS ════════ -->
-      <section id="view-events" class="view-section hidden">
+      <section id="view-events" class="view-section hidden space-y-4">
         <div class="page-title-bar">
-          <h1 class="page-title">กิจกรรมสภานักเรียน</h1>
-          <button id="btnAddEvent" class="hidden action-btn-primary">
+          <h1 class="page-title">กิจกรรมและงานสภา</h1>
+          <button id="btnAddEvent" class="hidden action-btn-primary bg-pink-600 hover:bg-pink-700">
             <i class="fa-solid fa-plus mr-1.5"></i>เพิ่มกิจกรรม
           </button>
         </div>
 
         <!-- Category filter chips -->
-        <div id="eventFilters" class="flex flex-wrap gap-2 mb-4 overflow-x-auto pb-1 no-scrollbar">
+        <div id="eventFilters" class="flex flex-wrap gap-2 pb-1 no-scrollbar overflow-x-auto">
           <button class="filter-chip active" data-cat="all">ทั้งหมด</button>
           <button class="filter-chip" data-cat="กิจกรรมสภา">📋 กิจกรรมสภา</button>
           <button class="filter-chip" data-cat="พัฒนาศักยภาพ">🚀 พัฒนาศักยภาพ</button>
@@ -171,9 +193,9 @@
         </div>
 
         <!-- Search -->
-        <div class="relative mb-4">
+        <div class="relative">
           <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
-          <input id="eventSearch" type="text" class="search-input pl-9" placeholder="ค้นหากิจกรรม...">
+          <input id="eventSearch" type="text" class="search-input pl-9 w-full" placeholder="ค้นหากิจกรรม...">
         </div>
 
         <div id="eventsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
@@ -184,41 +206,72 @@
       </section>
 
       <!-- ════════ VIEW: MEMBERS ════════ -->
-      <section id="view-members" class="view-section hidden">
+      <section id="view-members" class="view-section hidden space-y-4">
         <div class="page-title-bar">
-          <h1 class="page-title">สมาชิกสภานักเรียน</h1>
-          <button id="btnAddMember" class="hidden action-btn-primary">
-            <i class="fa-solid fa-user-plus mr-1.5"></i>เพิ่มสมาชิก
-          </button>
+          <h1 class="page-title">รายชื่อคณะกรรมการสภา</h1>
+          
+          <!-- Quick Buttons for Admin on Members Tab -->
+          <div id="membersAdminActions" class="hidden flex flex-wrap gap-2">
+            <button class="quick-add-member-btn action-btn-primary bg-emerald-600 hover:bg-emerald-700 text-xs py-1.5 px-3.5 rounded-full">
+              <i class="fa-solid fa-user-plus mr-1.5"></i>เพิ่มสมาชิก
+            </button>
+            <button class="quick-attendance-btn action-btn-primary bg-amber-500 hover:bg-amber-600 text-xs py-1.5 px-3.5 rounded-full">
+              <i class="fa-solid fa-clipboard-user mr-1.5"></i>เช็คชื่อ
+            </button>
+            <button class="quick-eval-btn action-btn-primary bg-indigo-600 hover:bg-indigo-700 text-xs py-1.5 px-3.5 rounded-full">
+              <i class="fa-solid fa-star mr-1.5"></i>ประเมินผล
+            </button>
+          </div>
         </div>
 
         <!-- Search + filter row -->
-        <div class="flex flex-col sm:flex-row gap-3 mb-4">
-          <div class="relative flex-1">
+        <div class="space-y-3">
+          <div class="relative">
             <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
             <input id="memberSearch" type="text" class="search-input pl-9 w-full" placeholder="ค้นหา รหัส / ชื่อ / ชั้น...">
           </div>
-          <select id="memberDeptFilter" class="search-input sm:w-52">
-            <option value="">ทุกฝ่าย</option>
-          </select>
-          <select id="memberGenderFilter" class="search-input sm:w-36">
-            <option value="">ทุกเพศ</option>
-            <option value="ชาย">ชาย</option>
-            <option value="หญิง">หญิง</option>
-          </select>
+
+          <!-- Interactive Filters -->
+          <div class="bg-white border border-gray-100 rounded-2xl p-4 space-y-3 shadow-sm">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider mr-2 flex items-center gap-1"><i class="fa-solid fa-filter text-pink-500"></i>เลือกกลุ่มเพศ:</span>
+              <button type="button" id="memberFilterGenderAll" class="px-4 py-1.5 rounded-full text-xs font-bold border transition-all bg-pink-50 border-pink-100 text-pink-600" data-gender="">
+                👦👧 ทั้งหมด
+              </button>
+              <button type="button" id="memberFilterGenderMale" class="px-4 py-1.5 rounded-full text-xs font-bold border transition-all bg-white border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600" data-gender="ชาย">
+                👦 ชาย
+              </button>
+              <button type="button" id="memberFilterGenderFemale" class="px-4 py-1.5 rounded-full text-xs font-bold border transition-all bg-white border-gray-200 text-gray-600 hover:border-pink-300 hover:text-pink-600" data-gender="หญิง">
+                👧 หญิง
+              </button>
+            </div>
+
+            <div id="memberFilterDeptsContainer" class="hidden border-t border-gray-50 pt-3">
+              <div class="flex flex-col gap-2">
+                <span class="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1"><i class="fa-solid fa-sitemap text-violet-500"></i>คัดกรองตามฝ่าย:</span>
+                <div id="memberFilterDepts" class="flex flex-wrap gap-1.5">
+                  <!-- Rendered dynamically -->
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Import button (admin only) -->
-        <div id="memberImportBar" class="hidden flex items-center gap-2 mb-4 p-3 bg-emerald-50 border border-emerald-100 rounded-2xl">
-          <i class="fa-solid fa-file-import text-emerald-600"></i>
-          <span class="text-xs font-bold text-emerald-700 flex-1">นำเข้าสมาชิกจากไฟล์ Excel/CSV</span>
-          <label class="action-btn-sm bg-emerald-600 text-white cursor-pointer">
-            <i class="fa-solid fa-upload mr-1"></i>นำเข้าไฟล์
-            <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" class="hidden">
-          </label>
-          <button id="btnExportMembersExcel" class="action-btn-sm bg-teal-600 text-white">
-            <i class="fa-solid fa-file-excel mr-1"></i>Export Excel
-          </button>
+        <!-- Import/Export bar (visible only to admin) -->
+        <div id="memberImportBar" class="hidden flex items-center justify-between gap-3 p-3 bg-emerald-50 border border-emerald-100 rounded-2xl flex-wrap">
+          <div class="flex items-center gap-2 flex-1 min-w-0">
+            <i class="fa-solid fa-file-import text-emerald-600"></i>
+            <span class="text-xs font-bold text-emerald-700 truncate">จัดการนำเข้าสมาชิกจากไฟล์ Excel/CSV</span>
+          </div>
+          <div class="flex gap-2">
+            <label class="action-btn-sm bg-emerald-600 text-white cursor-pointer hover:bg-emerald-700">
+              <i class="fa-solid fa-upload mr-1"></i>นำเข้าไฟล์
+              <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" class="hidden">
+            </label>
+            <button id="btnExportMembersExcel" class="action-btn-sm bg-teal-600 text-white hover:bg-teal-700">
+              <i class="fa-solid fa-file-excel mr-1"></i>Export Excel
+            </button>
+          </div>
         </div>
 
         <!-- Desktop Table / Mobile Cards -->
@@ -248,16 +301,16 @@
       </section>
 
       <!-- ════════ VIEW: PROFILE (Member login) ════════ -->
-      <section id="view-profile" class="view-section hidden">
+      <section id="view-profile" class="view-section hidden max-w-2xl mx-auto">
         <!-- Not logged in state -->
-        <div id="profileGuest" class="max-w-md mx-auto py-8">
-          <div class="section-card p-8 text-center">
+        <div id="profileGuest" class="py-4">
+          <div class="section-card p-8 text-center border-pink-100 bg-white">
             <div class="w-20 h-20 bg-gradient-to-br from-pink-500 to-rose-600 rounded-full flex items-center justify-center mx-auto mb-5 shadow-lg shadow-pink-200">
               <i class="fa-solid fa-circle-user text-white text-3xl"></i>
             </div>
-            <h2 class="text-lg font-extrabold text-gray-800 mb-1">พื้นที่ส่วนตัว</h2>
+            <h2 class="text-lg font-extrabold text-gray-800 mb-1">พื้นที่ส่วนตัวสมาชิกสภา</h2>
             <p class="text-xs text-gray-500 mb-6 font-semibold">เข้าสู่ระบบด้วยรหัสนักเรียน เพื่อดูข้อมูลการปฏิบัติหน้าที่และดาวน์โหลดเกียรติบัตร</p>
-            <div class="space-y-3 text-left">
+            <div class="space-y-3 text-left max-w-sm mx-auto">
               <div>
                 <label class="input-label">รหัสนักเรียน</label>
                 <input id="memberLoginCode" type="text" class="input-field" placeholder="กรอกรหัสนักเรียน 5 หลัก">
@@ -280,18 +333,18 @@
               </div>
               <div id="memberNewPassRow" class="hidden">
                 <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
-                  <p class="text-[10px] font-bold text-amber-700"><i class="fa-solid fa-star mr-1.5 text-amber-500"></i>ยินดีต้อนรับ! เนื่องจากนี่คือการเข้าสู่ระบบครั้งแรก กรุณาตั้งรหัสผ่านใหม่</p>
+                  <p class="text-[10px] font-bold text-amber-700"><i class="fa-solid fa-star mr-1.5 text-amber-500"></i>ยินดีต้อนรับ! กรุณาตั้งรหัสผ่านสำหรับเข้าใช้งานครั้งแรก</p>
                 </div>
                 <label class="input-label">ตั้งรหัสผ่านใหม่</label>
                 <input id="memberNewPass" type="password" class="input-field" placeholder="ตั้งรหัสผ่าน (อย่างน้อย 4 ตัวอักษร)">
               </div>
-              <button id="btnMemberLoginNext" class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold rounded-xl shadow-md shadow-pink-200 hover:from-pink-600 hover:to-rose-700 transition active:scale-[0.98] text-sm">
+              <button id="btnMemberLoginNext" class="w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold rounded-xl shadow-md hover:from-pink-600 hover:to-rose-700 transition active:scale-[0.98] text-sm">
                 <i class="fa-solid fa-arrow-right mr-2"></i>ถัดไป
               </button>
-              <button id="btnMemberLoginSubmit" class="hidden w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold rounded-xl shadow-md shadow-pink-200 hover:from-pink-600 hover:to-rose-700 transition active:scale-[0.98] text-sm">
+              <button id="btnMemberLoginSubmit" class="hidden w-full py-2.5 bg-gradient-to-r from-pink-500 to-rose-600 text-white font-bold rounded-xl shadow-md hover:from-pink-600 hover:to-rose-700 transition active:scale-[0.98] text-sm">
                 <i class="fa-solid fa-right-to-bracket mr-2"></i>เข้าสู่ระบบ
               </button>
-              <button id="btnMemberSetPass" class="hidden w-full py-2.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold rounded-xl shadow-md shadow-amber-100 hover:from-amber-500 hover:to-orange-600 transition active:scale-[0.98] text-sm">
+              <button id="btnMemberSetPass" class="hidden w-full py-2.5 bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold rounded-xl shadow-md hover:from-amber-500 hover:to-orange-600 transition active:scale-[0.98] text-sm">
                 <i class="fa-solid fa-key mr-2"></i>บันทึกรหัสผ่านและเข้าระบบ
               </button>
             </div>
@@ -299,9 +352,9 @@
         </div>
 
         <!-- Logged in member dashboard -->
-        <div id="profileDashboard" class="hidden">
+        <div id="profileDashboard" class="hidden space-y-5">
           <!-- Profile Card -->
-          <div class="member-profile-card mb-5">
+          <div class="member-profile-card">
             <div class="member-profile-card-bg"></div>
             <div class="relative z-10 flex flex-col sm:flex-row items-center sm:items-end gap-5 pb-5">
               <div class="profile-avatar-wrap">
@@ -329,10 +382,10 @@
           </div>
 
           <!-- Stats -->
-          <div id="profileStats" class="grid grid-cols-3 gap-3 mb-5"></div>
+          <div id="profileStats" class="grid grid-cols-3 gap-3"></div>
 
           <!-- Personal Chart -->
-          <div class="section-card mb-5">
+          <div class="section-card">
             <div class="section-card-header">
               <h2 class="section-title"><i class="fa-solid fa-chart-pie text-[var(--primary)] mr-2"></i>สรุปการเข้าร่วมกิจกรรม</h2>
             </div>
@@ -340,7 +393,7 @@
           </div>
 
           <!-- Activity History -->
-          <div class="section-card mb-5">
+          <div class="section-card">
             <div class="section-card-header">
               <h2 class="section-title"><i class="fa-solid fa-clock-rotate-left text-[var(--primary)] mr-2"></i>ประวัติการเข้าร่วม</h2>
             </div>
@@ -348,7 +401,7 @@
           </div>
 
           <!-- Events joined -->
-          <div class="section-card mb-5">
+          <div class="section-card">
             <div class="section-card-header">
               <h2 class="section-title"><i class="fa-solid fa-calendar-check text-emerald-500 mr-2"></i>กิจกรรมที่เข้าร่วม</h2>
             </div>
@@ -357,7 +410,7 @@
           </div>
 
           <!-- Certificates -->
-          <div class="section-card mb-5">
+          <div class="section-card">
             <div class="section-card-header">
               <h2 class="section-title"><i class="fa-solid fa-certificate text-amber-500 mr-2"></i>เกียรติบัตรของฉัน</h2>
             </div>
@@ -368,16 +421,16 @@
       </section>
 
       <!-- ════════ VIEW: ADMIN ════════ -->
-      <section id="view-admin" class="view-section hidden">
+      <section id="view-admin" class="view-section hidden space-y-4">
         <div class="page-title-bar">
-          <h1 class="page-title"><i class="fa-solid fa-gear text-[var(--primary)] mr-2"></i>แผงควบคุมแอดมิน</h1>
+          <h1 class="page-title"><i class="fa-solid fa-gear text-[var(--primary)] mr-2"></i>แผงควบคุมระบบ (Admin Panel)</h1>
           <button id="btnAdminLogout2" class="action-btn-sm bg-rose-100 text-rose-600 hover:bg-rose-200">
-            <i class="fa-solid fa-right-from-bracket mr-1"></i>ออก
+            <i class="fa-solid fa-right-from-bracket mr-1"></i>ออกจากการเข้าใช้แอดมิน
           </button>
         </div>
 
         <!-- Quick Action Buttons -->
-        <div class="flex flex-wrap gap-2 mb-6">
+        <div class="flex flex-wrap gap-2 mb-4">
           <button id="btnAddEventAdmin" class="action-btn-primary"><i class="fa-solid fa-calendar-plus mr-1.5"></i>เพิ่มกิจกรรม</button>
           <button id="btnAddMemberAdmin" class="action-btn-sm bg-pink-600 text-white hover:bg-pink-700"><i class="fa-solid fa-user-plus mr-1.5"></i>เพิ่มสมาชิก</button>
           <button id="btnAttendanceAdmin" class="action-btn-sm bg-amber-500 text-white hover:bg-amber-600"><i class="fa-solid fa-clipboard-user mr-1.5"></i>เช็คชื่อ</button>
@@ -392,10 +445,10 @@
         </div>
 
         <!-- Admin Stats -->
-        <div id="adminStats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"></div>
+        <div id="adminStats" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4"></div>
 
         <!-- Events Management -->
-        <div class="section-card mb-4">
+        <div class="section-card">
           <div class="section-card-header">
             <h2 class="section-title"><i class="fa-solid fa-calendar-days text-amber-500 mr-2"></i>จัดการกิจกรรม</h2>
           </div>
@@ -403,7 +456,7 @@
         </div>
 
         <!-- System Settings Accordion -->
-        <div class="section-card mb-4">
+        <div class="section-card">
           <button class="section-card-header w-full text-left" id="toggleSettings">
             <h2 class="section-title"><i class="fa-solid fa-sliders text-gray-500 mr-2"></i>ตั้งค่าระบบ</h2>
             <i class="fa-solid fa-chevron-down text-gray-400 text-xs transition-transform" id="settingsChevron"></i>
@@ -426,17 +479,31 @@
                 <label class="input-label">ชื่อโรงเรียน (แสดงบน Hero)</label>
                 <input id="settingSchoolName" type="text" class="input-field" placeholder="โรงเรียน...">
               </div>
+              <div>
+                <label class="input-label">สีหลัก (Primary Color)</label>
+                <div class="flex gap-2 items-center">
+                  <input id="settingColorPrimary" type="color" class="w-12 h-9 rounded cursor-pointer border-0 bg-transparent" value="#D81B60">
+                  <span class="text-xs text-gray-500 font-bold" id="settingColorPrimaryHex">#D81B60</span>
+                </div>
+              </div>
+              <div>
+                <label class="input-label">สีรอง (Secondary Color)</label>
+                <div class="flex gap-2 items-center">
+                  <input id="settingColorSecondary" type="color" class="w-12 h-9 rounded cursor-pointer border-0 bg-transparent" value="#7C3AED">
+                  <span class="text-xs text-gray-500 font-bold" id="settingColorSecondaryHex">#7C3AED</span>
+                </div>
+              </div>
             </div>
             <button id="btnSaveSystem" class="action-btn-sm bg-[var(--primary)] text-white hover:bg-pink-700">
               <i class="fa-solid fa-floppy-disk mr-1.5"></i>บันทึก
-            </button>
+          </button>
           </div>
         </div>
 
         <!-- Telegram -->
-        <div class="section-card mb-4">
+        <div class="section-card">
           <button class="section-card-header w-full text-left" id="toggleTelegram">
-            <h2 class="section-title"><i class="fa-brands fa-telegram text-blue-500 mr-2"></i>Telegram Bot</h2>
+            <h2 class="section-title"><i class="fa-brands fa-telegram text-blue-500 mr-2"></i>Telegram Bot Notifications</h2>
             <i class="fa-solid fa-chevron-down text-gray-400 text-xs" id="telegramChevron"></i>
           </button>
           <div id="telegramPanel" class="hidden px-4 pb-5 space-y-3 border-t border-gray-100 pt-4">
@@ -452,7 +519,7 @@
         </div>
 
         <!-- Certificate Campaigns -->
-        <div class="section-card mb-4">
+        <div class="section-card">
           <div class="section-card-header">
             <h2 class="section-title"><i class="fa-solid fa-certificate text-amber-500 mr-2"></i>แคมเปญเกียรติบัตร</h2>
             <button id="btnAddCampaign" class="action-btn-sm bg-amber-500 text-white hover:bg-amber-600">
@@ -463,7 +530,7 @@
         </div>
 
         <!-- Activities & Criteria -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div class="section-card">
             <div class="section-card-header">
               <h2 class="section-title"><i class="fa-solid fa-calendar-plus text-amber-500 mr-2"></i>ประเภทกิจกรรม</h2>
@@ -737,9 +804,6 @@
   </div>
 </div>
 
-<!-- Alert container -->
-<div id="alertContainer" class="fixed top-4 right-4 z-[999] space-y-2 w-80 pointer-events-none"></div>
-
 <!-- Modal: Campaign (Add/Edit) -->
 <div id="campaignModal" class="modal-overlay hidden">
   <div class="modal-box max-w-lg">
@@ -872,6 +936,70 @@
       <button id="importModalConfirm" class="modal-btn-confirm bg-emerald-600 hover:bg-emerald-700">
         <i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>ยืนยันนำเข้าทั้งหมด
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Member Public Profile -->
+<div id="publicProfileModal" class="modal-overlay hidden">
+  <div class="modal-box max-w-2xl">
+    <div class="modal-header modal-header-rose">
+      <h5 class="modal-title text-[var(--primary)]">
+        <i class="fa-solid fa-circle-user mr-1.5"></i>ประวัติและข้อมูลการเข้าร่วม
+      </h5>
+      <button type="button" class="modal-close-btn" id="publicProfileModalClose">✕</button>
+    </div>
+    <div class="modal-body space-y-5 overflow-y-auto">
+      <!-- Member Info Card -->
+      <div class="member-profile-card">
+        <div class="member-profile-card-bg"></div>
+        <div class="relative z-10 flex flex-col sm:flex-row items-center sm:items-end gap-5 pb-5">
+          <div class="profile-avatar-wrap">
+            <img id="pubProfilePhoto" src="" class="w-full h-full object-cover rounded-full hidden" alt="">
+            <div id="pubProfileInitial" class="w-full h-full rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white font-black text-2xl"></div>
+          </div>
+          <div class="text-center sm:text-left">
+            <p class="text-[10px] font-bold text-pink-200 tracking-widest uppercase mb-0.5" id="pubProfileDept">ฝ่ายสภา</p>
+            <h2 id="pubProfileName" class="text-xl font-black text-white leading-tight">ชื่อสมาชิก</h2>
+            <p id="pubProfileClass" class="text-sm text-pink-100 font-semibold mt-0.5">ชั้นเรียน</p>
+            <div class="flex items-center justify-center sm:justify-start gap-2 mt-2">
+              <span id="pubProfileCode" class="bg-white/20 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">รหัส</span>
+              <span id="pubProfileStatus" class="bg-emerald-500/80 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">● สมาชิกสภา</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div id="pubProfileStats" class="grid grid-cols-3 gap-3"></div>
+
+      <!-- Personal Chart & History -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- Chart -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h2 class="section-title"><i class="fa-solid fa-chart-pie text-[var(--primary)] mr-2"></i>สรุปการเข้าร่วมกิจกรรม</h2>
+          </div>
+          <div id="pubProfileChart" class="flex justify-center py-2"></div>
+        </div>
+
+        <!-- History -->
+        <div class="section-card">
+          <div class="section-card-header">
+            <h2 class="section-title"><i class="fa-solid fa-clock-rotate-left text-[var(--primary)] mr-2"></i>ประวัติการเข้าร่วม</h2>
+          </div>
+          <div id="pubProfileHistory" class="divide-y divide-gray-100 max-h-56 overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <!-- Certs -->
+      <div class="section-card">
+        <div class="section-card-header">
+          <h2 class="section-title"><i class="fa-solid fa-certificate text-amber-500 mr-2"></i>เกียรติบัตร</h2>
+        </div>
+        <div id="pubProfileCerts" class="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4"></div>
+        <div id="pubProfileCertsEmpty" class="hidden py-8 text-center text-gray-400 text-xs font-semibold">ยังไม่มีเกียรติบัตร</div>
+      </div>
     </div>
   </div>
 </div>
