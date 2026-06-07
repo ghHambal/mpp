@@ -2137,14 +2137,16 @@ function openPublicProfile(memberId) {
   }
 
   const att = memberAttendance(member.id);
-  const participantEvents = eventsForMember(member.id);
+  // Count from council_attendance (same data shown in history below)
+  const attRows = state.attendance.filter((row) => String(row.member_id) === String(member.id));
+  const presentCount = attRows.filter((row) => row.status === 'present').length;
   const evaluated = state.evaluations.filter((row) => String(row.member_id) === String(member.id)).length;
 
   const statsContainer = $('pubProfileStats');
   if (statsContainer) {
     statsContainer.innerHTML = [
-      ['เข้าเฉลี่ย', att.label],
-      ['กิจกรรม', participantEvents.length],
+      ['เข้าเฉลี่ย', att.label !== '-' ? att.label : '0%'],
+      ['เข้าร่วม', `${presentCount}/${attRows.length}`],
       ['ประเมิน', evaluated]
     ].map(([label, value]) => `
       <div class="stat-card">
